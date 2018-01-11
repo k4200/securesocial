@@ -1,9 +1,9 @@
 import play.sbt.PlayImport.PlayKeys._
 
-import SonatypeKeys._
+// import SonatypeKeys._
 
 // Import default settings. This changes `publishTo` settings to use the Sonatype repository and add several commands for publishing.
-sonatypeSettings
+// sonatypeSettings
 
 name := "SecureSocial"
 
@@ -44,13 +44,12 @@ publishArtifact in Test := false
 
 pomIncludeRepository := { _ => false }
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (version.value.trim.endsWith("SNAPSHOT"))
-    Some("snapshots" at nexus + "content/repositories/snapshots")
+publishTo := Some(
+  if (isSnapshot.value)
+    Opts.resolver.sonatypeSnapshots
   else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
+    Opts.resolver.sonatypeStaging
+)
 
 startYear := Some(2012)
 
