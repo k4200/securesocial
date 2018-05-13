@@ -11,7 +11,7 @@ Below is the original README as of Mar 12, 2015:
 
 |SecureSocial Release|Target Play! framework version|
 |-------|---------------------|
-|3.2.4|2.5.X|
+|3.2.5|2.5.X|
 |3.1.0-SNAPSHOT|2.4.X|
 
 ```
@@ -53,9 +53,12 @@ Use the versions by the original author for Play! 2.2 and 2.1. See [the doc](htt
 * The ones that this forked version has added:
     * Bitbucket (OAuth2)
     * Backlog (OAuth2)
+    * ChatWork (OAuth2)
 
 # Changelog
 
+* 3.2.5 (2018-05-13)
+    * Added ChatWorkProvider
 * 3.2.4 (2017-05-26)
     * Updated play-mailer from 3.0.1 to 5.0.0, which is for Play 2.5
     * Updated the play dependencies to 2.5.15
