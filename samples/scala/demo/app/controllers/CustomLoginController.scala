@@ -18,5 +18,5 @@ class CustomLoginController @Inject() (implicit val env: RuntimeEnvironment, val
 }
 
 class CustomRoutesService(implicit override val configuration: Configuration, override val playEnv: Environment) extends RoutesService.Default {
-  override def loginPageUrl(implicit req: RequestHeader): String = controllers.routes.CustomLoginController.login().absoluteURL(identityProviderConfigurations.sslEnabled)
+  override def loginPageUrl(implicit req: RequestHeader): String = controllers.routes.CustomLoginController.login().absoluteURL(sslEnabled.value)
 }
