@@ -157,14 +157,14 @@ object OAuth1Provider {
 }
 
 trait ServiceInfoHelper {
-  def forProvider(id: String): ServiceInfo
+  def forProvider(id: String)(implicit configuration: Configuration): ServiceInfo
 }
 
 object ServiceInfoHelper {
-  class Default(implicit val configuration: Configuration, implicit val environment: Environment) extends ServiceInfoHelper {
+  class Default(implicit val environment: Environment) extends ServiceInfoHelper {
     implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
 
-    def forProvider(id: String): ServiceInfo = {
+    def forProvider(id: String)(implicit configuration: Configuration): ServiceInfo = {
       val result = for {
         requestTokenUrl <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.RequestTokenUrl);
         accessTokenUrl <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.AccessTokenUrl);
