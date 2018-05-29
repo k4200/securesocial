@@ -17,7 +17,7 @@
 package securesocial.core
 
 import _root_.java.util.UUID
-import play.api.{ Environment, Configuration }
+import play.api.Configuration
 import play.api.libs.oauth._
 import play.api.mvc.{ AnyContent, Request }
 import play.api.mvc.Results.Redirect
@@ -85,8 +85,6 @@ abstract class OAuth1Provider(
     extends IdentityProvider {
 
   protected implicit val executionContext = client.executionContext
-  protected implicit val playEnv: Environment
-  implicit private val implicitConf = configuration
   protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   protected val logger = play.api.Logger(this.getClass.getName)
 
@@ -161,7 +159,7 @@ trait ServiceInfoHelper {
 }
 
 object ServiceInfoHelper {
-  class Default(implicit val environment: Environment) extends ServiceInfoHelper {
+  class Default extends ServiceInfoHelper {
     implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
 
     def forProvider(id: String)(implicit configuration: Configuration): ServiceInfo = {

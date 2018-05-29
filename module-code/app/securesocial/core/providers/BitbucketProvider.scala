@@ -18,7 +18,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.ws.{ WSResponse, WSAuthScheme }
 import play.api.libs.json.{ Reads, Json, JsValue }
 import securesocial.core._
@@ -48,7 +47,7 @@ class BitbucketOAuth2Client(
  */
 class BitbucketProvider(routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
+  client: OAuth2Client)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.bitbucket.org/2.0/user?access_token=%s"
 
@@ -100,7 +99,7 @@ object BitbucketProvider {
     display_name: String,
     username: String)
 
-  def apply(routesService: RoutesService, cacheService: CacheService, dummyClient: OAuth2Client)(implicit executionContext: ExecutionContext, configuration: Configuration, playEnv: Environment): BitbucketProvider = {
+  def apply(routesService: RoutesService, cacheService: CacheService, dummyClient: OAuth2Client)(implicit executionContext: ExecutionContext): BitbucketProvider = {
     val client = new BitbucketOAuth2Client(dummyClient.httpService, dummyClient.settings)
     new BitbucketProvider(routesService, cacheService, client)
   }

@@ -21,7 +21,7 @@ package securesocial.core.providers
 import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
-import play.api.{ Configuration, Environment }
+import play.api.Configuration
 import play.api.libs.ws.WSResponse
 import play.api.libs.json.{ Reads, Json, JsValue }
 import play.api.mvc._
@@ -58,7 +58,7 @@ class BacklogProvider(
   protected val routesService: RoutesService,
   protected val cacheService: CacheService,
   httpService: HttpService,
-  private var optSpaceIdOrApiHost: Option[String])(implicit val executionContext: ExecutionContext, val playEnv: Environment, val configuration: Configuration)
+  private var optSpaceIdOrApiHost: Option[String])(implicit val executionContext: ExecutionContext, val configuration: Configuration)
     extends OAuth2Provider {
 
   val identityProviderConfigurations = new IdentityProviderConfigurations.Default

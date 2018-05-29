@@ -16,7 +16,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.json.JsObject
 import securesocial.core._
 import securesocial.core.services.{ CacheService, RoutesService }
@@ -28,7 +27,7 @@ import scala.concurrent.Future
  */
 class SoundcloudProvider(routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
+  client: OAuth2Client)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   val UserInfoApi = "https://api.soundcloud.com/me.json?oauth_token="
   val Error = "error"

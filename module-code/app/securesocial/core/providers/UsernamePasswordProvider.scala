@@ -17,7 +17,7 @@
 package securesocial.core.providers
 
 import org.joda.time.DateTime
-import play.api.{ Configuration, Environment }
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc._
@@ -35,7 +35,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class UsernamePasswordProvider[U](userService: UserService[U],
   avatarService: Option[AvatarService],
   viewTemplates: ViewTemplates,
-  passwordHashers: Map[String, PasswordHasher])(implicit val executionContext: ExecutionContext, val configuration: Configuration, val playEnv: Environment)
+  passwordHashers: Map[String, PasswordHasher])(implicit val executionContext: ExecutionContext)
     extends IdentityProvider with ApiSupport with Controller {
 
   override val id = UsernamePasswordProvider.UsernamePassword

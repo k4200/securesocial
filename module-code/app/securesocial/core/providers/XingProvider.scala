@@ -16,7 +16,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.json.JsObject
 import securesocial.core._
 import securesocial.core.providers.XingProvider._
@@ -30,7 +29,7 @@ import scala.concurrent.Future
 class XingProvider(
   routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth1Client)(implicit val configuration: Configuration, val playEnv: Environment)
+  client: OAuth1Client)
     extends OAuth1Provider(routesService, cacheService, client) {
 
   override val id = XingProvider.Xing

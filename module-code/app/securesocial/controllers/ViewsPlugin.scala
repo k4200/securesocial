@@ -36,7 +36,7 @@ trait ViewTemplates {
   /**
    * Returns the html for the login page
    */
-  def getLoginPage(form: Form[(String, String)], msg: Option[String] = None)(implicit request: RequestHeader, lang: Lang, configuration: Configuration): Html
+  def getLoginPage(form: Form[(String, String)], msg: Option[String] = None)(implicit request: RequestHeader, lang: Lang): Html
 
   /**
    * Returns the html for the signup page
@@ -61,7 +61,7 @@ trait ViewTemplates {
   /**
    * Returns the html for the change password page
    */
-  def getPasswordChangePage(form: Form[ChangeInfo])(implicit request: RequestHeader, lang: Lang, configuration: Configuration): Html
+  def getPasswordChangePage(form: Form[ChangeInfo])(implicit request: RequestHeader, lang: Lang): Html
 
   /**
    * Returns the html for the not authorized page
@@ -138,7 +138,7 @@ object ViewTemplates {
     implicit val implicitEnv = env
 
     override def getLoginPage(form: Form[(String, String)],
-      msg: Option[String] = None)(implicit request: RequestHeader, lang: Lang, configuration: Configuration): Html = {
+      msg: Option[String] = None)(implicit request: RequestHeader, lang: Lang): Html = {
       implicit val messages = messagesApi.preferred(request)
       securesocial.views.html.login(form, msg)
     }
@@ -163,7 +163,7 @@ object ViewTemplates {
       securesocial.views.html.Registration.resetPasswordPage(form, token)
     }
 
-    override def getPasswordChangePage(form: Form[ChangeInfo])(implicit request: RequestHeader, lang: Lang, configuration: Configuration): Html = {
+    override def getPasswordChangePage(form: Form[ChangeInfo])(implicit request: RequestHeader, lang: Lang): Html = {
       implicit val messages = messagesApi.preferred(request)
       securesocial.views.html.passwordChange(form)
     }

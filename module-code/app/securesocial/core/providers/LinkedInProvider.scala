@@ -18,7 +18,7 @@ package securesocial.core.providers
 
 import securesocial.core._
 import play.api.libs.oauth.{ RequestToken, OAuthCalculator }
-import play.api.{ Environment, Configuration, Logger }
+import play.api.Logger
 import LinkedInProvider._
 import scala.concurrent.{ ExecutionContext, Future }
 import securesocial.core.services.{ RoutesService, CacheService, HttpService }
@@ -30,7 +30,7 @@ class LinkedInProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth1Client //= new OAuth1Client.Default(ServiceInfoHelper.forProvider(LinkedInProvider.LinkedIn), httpService)
-  )(implicit val configuration: Configuration, val playEnv: Environment) extends OAuth1Provider(
+  ) extends OAuth1Provider(
   routesService,
   cacheService,
   client
