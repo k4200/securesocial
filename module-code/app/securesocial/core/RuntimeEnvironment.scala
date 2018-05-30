@@ -35,8 +35,6 @@ trait RuntimeEnvironment {
 
   def mailer: Mailer
 
-  val providerIds: List[String]
-
   def currentHasher: PasswordHasher
   def passwordHashers: Map[String, PasswordHasher]
   def passwordValidator: PasswordValidator
@@ -45,8 +43,8 @@ trait RuntimeEnvironment {
   def cacheService: CacheService
   def avatarService: Option[AvatarService]
 
-  // TODO: apply upstream changes
-  //def providers: Map[String, IdentityProvider]
+  def customProviders: Map[String, IdentityProvider]
+  def providerIds: List[String]
 
   def idGenerator: IdGenerator
   def authenticatorService: AuthenticatorService[U]
@@ -164,6 +162,10 @@ object RuntimeEnvironment {
 
     override lazy val eventListeners: Seq[EventListener] = Seq()
 
+    protected def include(p: IdentityProvider): (String, IdentityProvider) = p.id -> p
+
+    override lazy val customProviders: ListMap[String, IdentityProvider] = ListMap()
+
     override lazy val providerIds = List(
       FacebookProvider.Facebook,
       FoursquareProvider.Foursquare,
@@ -187,15 +189,5 @@ object RuntimeEnvironment {
       ChatWorkProvider.ChatWork,
       UsernamePasswordProvider.UsernamePassword
     )
-
-    // TODO: apply upstream changes
-    //protected def include(p: IdentityProvider): (String, IdentityProvider) = p.id -> p
-    //protected def oauth1ClientFor(provider: String): OAuth1Client =
-    //  new OAuth1Client.Default(ServiceInfoHelper.forProvider(configuration, provider), httpService)
-    //protected def oauth2ClientFor(provider: String): OAuth2Client =
-    //  new OAuth2Client.Default(httpService, OAuth2Settings.forProvider(configuration, provider))
-    //protected lazy val builtInProviders = ListMap[String, IdentityProvider]()
-    //
-    //override lazy val providers: ListMap[String, IdentityProvider] = builtInProviders
   }
 }

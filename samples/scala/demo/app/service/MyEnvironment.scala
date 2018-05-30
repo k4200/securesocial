@@ -43,14 +43,13 @@ class MyEnvironment @Inject() (
   override val executionContext: ExecutionContext,
   override val parsers: PlayBodyParsers,
   override val actorSystem: ActorSystem,
-  customProviders: CustomProviders) extends RuntimeEnvironment.Default {
+  customIdentityProviders: CustomProviders) extends RuntimeEnvironment.Default {
   override type U = DemoUser
   override lazy val routes = new CustomRoutesService(environment, configuration)
   override lazy val userService: InMemoryUserService = new InMemoryUserService()
   override lazy val eventListeners = List(new MyEventListener())
-  // TODO: apply upstream changes
-  //override lazy val providers: ListMap[String, IdentityProvider] =
-  //  ListMap(customProviders.list.map(include): _*) ++ builtInProviders
+  override lazy val customProviders: ListMap[String, IdentityProvider] =
+    ListMap(customIdentityProviders.list.map(include): _*)
 }
 
 case class CustomProviders(list: Seq[IdentityProvider]) {

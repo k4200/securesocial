@@ -107,6 +107,8 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
    * @param miscParam
    */
   private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String]): Option[IdentityProvider] = provider match {
+    case _ if env.customProviders.contains(provider) =>
+      env.customProviders.get(provider)
     case BacklogProvider.Backlog | LinkedInProvider.LinkedIn | TwitterProvider.Twitter | XingProvider.Xing | UsernamePasswordProvider.UsernamePassword =>
       Some(env.createProvider(provider, None, miscParam))
     case _ =>
