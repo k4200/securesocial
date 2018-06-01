@@ -9,7 +9,7 @@ import securesocial.core.providers.GoogleProvider
 import securesocial.core.{ IdentityProvider, EventListener, RuntimeEnvironment }
 import securesocial.core.services.{ HttpService, UserService, RoutesService }
 import org.specs2.matcher.Matcher
-import play.api.libs.ws.{ WSRequest, WSRequestHolder, WSResponse }
+import play.api.libs.ws.{ WSRequest, WSResponse }
 import scala.concurrent.Future
 import play.api.libs.json.Json
 
