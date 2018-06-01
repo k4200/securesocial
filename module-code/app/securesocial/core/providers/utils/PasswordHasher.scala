@@ -48,8 +48,6 @@ abstract class PasswordHasher {
    * @return true if the password matches, false otherwise.
    */
   def matches(passwordInfo: PasswordInfo, suppliedPassword: String): Boolean
-
-  protected val configuration: Configuration
 }
 
 object PasswordHasher {
@@ -58,8 +56,15 @@ object PasswordHasher {
   /**
    * The default password hasher based on BCrypt.
    */
-  class Default()(implicit protected val configuration: Configuration) extends PasswordHasher {
-    val logRounds: Int = configuration.getInt(Default.RoundsProperty).getOrElse(Default.Rounds)
+  class Default(logRounds: Int) extends PasswordHasher {
+    /**
+     * Creates an instance with logRounds set to the value specified in
+     * securesocial.passwordHasher.bcrypt.rounds or to a default 10 if the property is not
+     * defined.
+     */
+    def this()(implicit configuration: Configuration) = this({
+      configuration.getInt(Default.RoundsProperty).getOrElse(Default.Rounds)
+    })
 
     /**
      * The hasher id
