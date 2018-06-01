@@ -130,10 +130,13 @@ trait SecureSocial extends Controller with I18nSupport {
       }
     }
 
-    override def invokeBlock[A](request: Request[A],
-      block: (SecuredRequest[A, env.U]) => Future[Result]): Future[Result] = {
-      invokeSecuredBlock(authorize, request, block)
-    }
+    override def invokeBlock[A](
+      request: Request[A],
+      block: (SecuredRequest[A, env.U]) => Future[Result]
+    ): Future[Result] =
+      {
+        invokeSecuredBlock(authorize, request, block)
+      }
   }
 
   /**
@@ -149,19 +152,22 @@ trait SecureSocial extends Controller with I18nSupport {
   class UserAwareActionBuilder extends ActionBuilder[({ type R[A] = RequestWithUser[A, env.U] })#R] {
     override protected implicit def executionContext: ExecutionContext = env.executionContext
 
-    override def invokeBlock[A](request: Request[A],
-      block: (RequestWithUser[A, env.U]) => Future[Result]): Future[Result] = {
-      env.authenticatorService.fromRequest(request).flatMap {
-        case Some(authenticator) if authenticator.isValid =>
-          authenticator.touch.flatMap {
-            a => block(RequestWithUser(Some(a.user), Some(a), request))
-          }
-        case Some(authenticator) if !authenticator.isValid =>
-          block(RequestWithUser(None, None, request)).flatMap(_.discardingAuthenticator(authenticator))
-        case None =>
-          block(RequestWithUser(None, None, request))
+    override def invokeBlock[A](
+      request: Request[A],
+      block: (RequestWithUser[A, env.U]) => Future[Result]
+    ): Future[Result] =
+      {
+        env.authenticatorService.fromRequest(request).flatMap {
+          case Some(authenticator) if authenticator.isValid =>
+            authenticator.touch.flatMap {
+              a => block(RequestWithUser(Some(a.user), Some(a), request))
+            }
+          case Some(authenticator) if !authenticator.isValid =>
+            block(RequestWithUser(None, None, request)).flatMap(_.discardingAuthenticator(authenticator))
+          case None =>
+            block(RequestWithUser(None, None, request))
+        }
       }
-    }
   }
 
   val enableRefererAsOriginalUrl = {
@@ -197,7 +203,8 @@ object SecureSocial {
       case None => {
         refererPathAndQuery.map { referer =>
           result.withSession(
-            request.session + (OriginalUrlKey -> referer))
+            request.session + (OriginalUrlKey -> referer)
+          )
         }.getOrElse(result)
       }
     }

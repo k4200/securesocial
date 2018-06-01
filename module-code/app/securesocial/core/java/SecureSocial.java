@@ -25,8 +25,7 @@ import securesocial.core.SecureSocial$;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-
+import static scala.compat.java8.FutureConverters.toJava;
 /**
  *
  */
@@ -72,17 +71,10 @@ public class SecureSocial {
     public static CompletionStage<Object> currentUser(RuntimeEnvironment env, ExecutionContext executor) {
         RequestHeader requestHeader = Http.Context.current()._requestHeader();
         if (requestHeader == null || env == null) {
-            return CompletableFuture.supplyAsync(null);
+            return CompletableFuture.completedFuture(null);
         } else {
-            scala.concurrent.Future scalaFuture = SecureSocial$.MODULE$.currentUser(requestHeader, env, executor);
-            Function<Option<Object>, Object> mapFunction = new Function<Option<Object>, Object>() {
-
-                @Override
-                public Object apply(Option<Object> objectOption) {
-                    return objectOption.isDefined() ? objectOption.get() : null;
-                }
-            };
-            return scala.compat.java8.FutureConverters.toJava(scalaFuture).thenApplyAsync(mapFunction);
+            scala.concurrent.Future<Option<Object>> scalaFuture = SecureSocial$.MODULE$.currentUser(requestHeader, env, executor);
+            return toJava(scalaFuture).thenApply(userOption -> userOption.isDefined() ? userOption.get() : null);
         }
     }
 }

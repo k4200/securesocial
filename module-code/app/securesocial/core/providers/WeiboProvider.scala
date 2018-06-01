@@ -28,9 +28,11 @@ import scala.concurrent.Future
  * A Weibo provider
  *
  */
-class WeiboProvider(routesService: RoutesService,
+class WeiboProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)
+  client: OAuth2Client
+)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
 
   @Inject

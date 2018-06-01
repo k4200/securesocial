@@ -61,6 +61,11 @@ trait RuntimeEnvironment {
 
   implicit def executionContext: ExecutionContext
 
+  // TODO: apply upstream changes
+  //def configuration: Configuration
+  //
+  //def messagesApi: MessagesApi
+
   /**
    * Factory method for IdentityProvider
    * @param provider provider name e.g. "github"
@@ -83,6 +88,9 @@ trait RuntimeEnvironment {
         new ConcurProvider(routes, cacheService, oauth2ClientFor(ConcurProvider.Concur, customOAuth2Settings))
       case SoundcloudProvider.Soundcloud =>
         new SoundcloudProvider(routes, cacheService, oauth2ClientFor(SoundcloudProvider.Soundcloud, customOAuth2Settings))
+      // TODO: apply upstream changes
+      //case LinkedInOAuth2Provider.LinkedIn =>
+      //  new LinkedInOAuth2Provider(routes, cacheService, oauth2ClientFor(LinkedInOAuth2Provider.LinkedIn, customOAuth2Settings)),
       case VkProvider.Vk =>
         new VkProvider(routes, cacheService, oauth2ClientFor(VkProvider.Vk, customOAuth2Settings))
       case DropboxProvider.Dropbox =>
@@ -132,7 +140,7 @@ object RuntimeEnvironment {
   abstract class Default extends RuntimeEnvironment {
     override lazy val routes: RoutesService = new RoutesService.Default()
 
-    override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)
+    override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)(configuration)
     override lazy val mailTemplates: MailTemplates = new MailTemplates.Default(this)
     override lazy val mailer: Mailer = new Mailer.Default(mailTemplates)
 
@@ -162,6 +170,8 @@ object RuntimeEnvironment {
       InstagramProvider.Instagram,
       ConcurProvider.Concur,
       SoundcloudProvider.Soundcloud,
+      // TODO: apply upstream changes
+      //LinkedInOAuth2Provider.LinkedIn,
       VkProvider.Vk,
       DropboxProvider.Dropbox,
       WeiboProvider.Weibo,
@@ -170,7 +180,7 @@ object RuntimeEnvironment {
       SlackProvider.Slack,
       BitbucketProvider.Bitbucket,
       BacklogProvider.Backlog,
-      LinkedInProvider.LinkedIn,
+      //LinkedInProvider.LinkedIn,
       TwitterProvider.Twitter,
       XingProvider.Xing,
       ChatWorkProvider.ChatWork,

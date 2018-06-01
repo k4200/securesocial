@@ -30,9 +30,11 @@ import scala.concurrent.Future
 /**
  * A Dropbox Provider (OAuth2)
  */
-class DropboxProvider(routesService: RoutesService,
+class DropboxProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)
+  client: OAuth2Client
+)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   @Inject
   var WS: WSClient = null

@@ -24,7 +24,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import ChatWorkProvider._
 
 class ChatWorkOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+    httpService: HttpService, settings: OAuth2Settings
+)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
   override def exchangeCodeForToken(code: String, callBackUrl: String, builder: OAuth2InfoBuilder): Future[OAuth2Info] = {
     val params = Map(
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
@@ -41,9 +42,11 @@ class ChatWorkOAuth2Client(
  * A ChatWork provider
  *
  */
-class ChatWorkProvider(routesService: RoutesService,
+class ChatWorkProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)
+  client: OAuth2Client
+)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   override val id = ChatWorkProvider.ChatWork
 
@@ -85,10 +88,12 @@ object ChatWorkProvider {
   case class ErrorResponse(
     message: String,
     detail: String,
-    id: Option[String])
+    id: Option[String]
+  )
 
   case class UserResponse(
     uuid: String,
     display_name: String,
-    username: String)
+    username: String
+  )
 }

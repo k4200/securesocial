@@ -8,9 +8,7 @@ scalariformSettings
 
 libraryDependencies ++= Seq(
   specs2 % "test",
-  "tv.kazu" %% "securesocial" % version.value,
-  "net.codingwell" %% "scala-guice" % "4.0.0",
-  "com.typesafe.play" %% "play-mailer" % "3.0.1"
+  "tv.kazu" %% "securesocial" % version.value
 )
 
 resolvers += Resolver.sonatypeRepo("snapshots")

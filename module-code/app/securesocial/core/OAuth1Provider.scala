@@ -81,7 +81,8 @@ object OAuth1Client {
 abstract class OAuth1Provider(
   routesService: RoutesService,
   cacheService: CacheService,
-  val client: OAuth1Client)
+  val client: OAuth1Client
+)
     extends IdentityProvider {
 
   protected implicit val executionContext = client.executionContext

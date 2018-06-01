@@ -20,11 +20,11 @@ import java.util.UUID
 import javax.inject.Inject
 
 import org.joda.time.DateTime
-import play.api.Application
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.i18n.Messages
+import play.api.i18n.{ I18nSupport, Messages, MessagesApi }
 import play.api.mvc.{ RequestHeader, Result }
 import securesocial.core.SecureSocial
 import securesocial.core.providers.MailToken
@@ -35,13 +35,16 @@ import scala.concurrent.Future
  * The base controller for password reset and password change operations
  *
  */
-abstract class MailTokenBasedOperations extends SecureSocial {
+abstract class MailTokenBasedOperations extends SecureSocial with I18nSupport {
   val Success = "success"
   val Error = "error"
   val Email = "email"
   val TokenDurationKey = "securesocial.userpass.tokenDuration"
   val DefaultDuration = 60
+  val configuration: Configuration = env.configuration
   val TokenDuration = configuration.getInt(TokenDurationKey).getOrElse(DefaultDuration)
+  // TODO: apply upstream changes
+  //implicit val messagesApi: MessagesApi = env.messagesApi
 
   val startForm = Form(
     Email -> email.verifying(nonEmpty)

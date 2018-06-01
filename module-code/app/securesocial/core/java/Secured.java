@@ -15,18 +15,21 @@
  */
 package securesocial.core.java;
 
+import play.libs.concurrent.HttpExecution;
 import play.mvc.Action;
 import play.mvc.Http;
 import play.mvc.Result;
 import scala.Option;
-import scala.runtime.BoxedUnit;
+import scala.concurrent.ExecutionContextExecutor;
 import securesocial.core.RuntimeEnvironment;
 import securesocial.core.authenticator.Authenticator;
 
 import javax.inject.Inject;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
+import static play.libs.concurrent.HttpExecution.defaultContext;
 import static scala.compat.java8.FutureConverters.toJava;
 
 /**
@@ -44,6 +47,7 @@ public class Secured extends Action<SecuredAction> {
     private RuntimeEnvironment env;
     private Authorization authorizationInstance;
     private SecuredActionResponses responses;
+    private static final String ENVIRONMENT_KEY = "securesocial-env";
 
     @Inject
     public Secured(RuntimeEnvironment env) throws Throwable {
@@ -51,61 +55,59 @@ public class Secured extends Action<SecuredAction> {
     }
 
     static void initEnv(RuntimeEnvironment env) throws IllegalAccessException, InstantiationException {
-        if (SecureSocial.env() == null) {
-            Http.Context.current().args.put("securesocial-env", env);
+        if ( SecureSocial.env() == null ) {
+            Http.Context.current().args.put(ENVIRONMENT_KEY, env);
         }
+    }
+
+    static void clearEnv() {
+        Http.Context.current().args.remove(ENVIRONMENT_KEY);
     }
 
 
     @Override
     public CompletionStage<Result> call(final Http.Context ctx) {
-        Exception exception;
         try {
             initEnv(env);
             authorizationInstance = configuration.authorization().newInstance();
             responses = configuration.responses().newInstance();
-            return toJava(env.authenticatorService().fromRequest(ctx._requestHeader())).thenComposeAsync(
-                    new Function<Option<Authenticator<Object>>, CompletionStage<Result>>() {
-                        @Override
-                        public CompletionStage<Result> apply(Option<Authenticator<Object>> authenticatorOption) {
-                            if (authenticatorOption.isDefined() && authenticatorOption.get().isValid()) {
-                                final Authenticator authenticator = authenticatorOption.get();
-                                Object user = authenticator.user();
-                                if (authorizationInstance.isAuthorized(user, configuration.params())) {
-                                    return toJava(authenticator.touch()).thenComposeAsync(new Function<Authenticator, CompletionStage<Result>>() {
-                                        @Override
-                                        public CompletionStage<Result> apply(Authenticator touched) {
-                                            ctx.args.put(SecureSocial.USER_KEY, touched.user());
-                                            return toJava(touched.touching(ctx)).thenComposeAsync(new Function<scala.runtime.BoxedUnit, CompletionStage<Result>>() {
-                                                @Override
-                                                public CompletionStage<Result> apply(scala.runtime.BoxedUnit unit) {
-                                                    return delegate.call(ctx);
-                                                }
-                                            });
-                                        }
-                                    });
-                                } else {
-                                    return responses.notAuthorizedResult(ctx);
-                                }
-                            } else {
-                                if (authenticatorOption.isDefined()) {
-                                    return toJava(authenticatorOption.get().discarding(ctx)).thenComposeAsync(
-                                            new Function<BoxedUnit, CompletionStage<Result>>() {
-                                                @Override
-                                                public CompletionStage<Result> apply(BoxedUnit unit) {
-                                                    return responses.notAuthenticatedResult(ctx);
-                                                }
-                                            }
-                                    );
-                                }
-                                return responses.notAuthenticatedResult(ctx);
-                            }
-                        }
-                    }
-            );
-        } catch (IllegalAccessException | InstantiationException e) {
-            exception = e;
+            return toJava(env.authenticatorService().fromRequest(ctx._requestHeader()))
+                    .thenComposeAsync(new CheckAuthenticator(ctx), HttpExecution.defaultContext())
+                    .whenComplete((result, ex) -> Secured.clearEnv());
+        } catch (Throwable t) {
+            CompletableFuture<Result> failedResult = new CompletableFuture<>();
+            failedResult.completeExceptionally(t);
+            return failedResult;
         }
-        throw new RuntimeException(exception);
+    }
+
+    class CheckAuthenticator implements Function<Option<Authenticator<Object>>, CompletionStage<Result>> {
+        private final Http.Context ctx;
+
+        CheckAuthenticator(Http.Context ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public CompletionStage<Result> apply(Option<Authenticator<Object>> authenticatorOption) {
+            ExecutionContextExecutor executor = HttpExecution.defaultContext();
+
+            if (authenticatorOption.isDefined() && authenticatorOption.get().isValid()) {
+                final Authenticator<Object> authenticator = authenticatorOption.get();
+                Object user = authenticator.user();
+                if (authorizationInstance.isAuthorized(user, configuration.params())) {
+                    return toJava(authenticator.touch())
+                            .thenComposeAsync(new InvokeDelegate(ctx, delegate), executor);
+                } else {
+                    return responses.notAuthorizedResult(ctx);
+                }
+            } else {
+                if (authenticatorOption.isDefined()) {
+                    return toJava(authenticatorOption.get().discarding(ctx))
+                            .thenComposeAsync(boxedUnit -> responses.notAuthenticatedResult(ctx), executor);
+                }
+                return responses.notAuthenticatedResult(ctx);
+            }
+        }
     }
 }

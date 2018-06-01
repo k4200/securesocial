@@ -33,7 +33,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import BacklogProvider._
 
 class BacklogOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+    httpService: HttpService, settings: OAuth2Settings
+)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
 
   def retrieveProfile(profileUrl: String, accessToken: String): Future[JsValue] = {
     httpService.url(profileUrl)
@@ -58,7 +59,8 @@ class BacklogProvider(
   protected val routesService: RoutesService,
   protected val cacheService: CacheService,
   httpService: HttpService,
-  private var optSpaceIdOrApiHost: Option[String])(implicit val executionContext: ExecutionContext, val configuration: Configuration)
+  private var optSpaceIdOrApiHost: Option[String]
+)(implicit val executionContext: ExecutionContext, val configuration: Configuration)
     extends OAuth2Provider {
 
   val identityProviderConfigurations = new IdentityProviderConfigurations.Default
@@ -198,9 +200,11 @@ object BacklogProvider {
   case class Error(
     message: String,
     code: Int,
-    moreInfo: String)
+    moreInfo: String
+  )
   case class ErrorResponse(
-      errors: List[Error]) {
+      errors: List[Error]
+  ) {
     def messages = {
       errors.map(_.message).mkString(",")
     }
@@ -210,5 +214,6 @@ object BacklogProvider {
     userId: String,
     roleType: Int,
     lang: Option[String],
-    mailAddress: String)
+    mailAddress: String
+  )
 }

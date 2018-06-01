@@ -1,10 +1,11 @@
+
+import play.api.{ Configuration, Environment }
 import play.api.inject.{ Binding, Module }
-import play.api.{ Environment, Configuration }
-import securesocial.core.{ BasicProfile, RuntimeEnvironment }
-import service.{ MyEnvironment, DemoUser }
+import securesocial.core.RuntimeEnvironment
+import service.MyEnvironment
 
 class DemoModule extends Module {
-  def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
+  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = {
     Seq(
       bind[RuntimeEnvironment].to[MyEnvironment]
     )

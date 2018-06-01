@@ -21,7 +21,7 @@ import javax.inject.Inject
 import play.api.{ Configuration, Environment }
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
+import play.api.i18n.{ Messages, MessagesApi }
 import play.api.mvc.Action
 import play.filters.csrf.{ CSRFCheck, _ }
 import securesocial.core._
@@ -36,7 +36,14 @@ import scala.concurrent.Future
  *
  * @param env an environment
  */
-class PasswordReset @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment, val CSRFAddToken: CSRFAddToken, val CSRFCheck: CSRFCheck) extends BasePasswordReset
+class PasswordReset @Inject() (
+  override implicit val env: RuntimeEnvironment,
+  // TODO: apply upstream changes
+  override val configuration: Configuration,
+  val playEnv: Environment,
+  val csrfAddToken: CSRFAddToken,
+  val csrfCheck: CSRFCheck
+) extends BasePasswordReset
 
 /**
  * The trait that provides the Password Reset functionality
@@ -56,24 +63,23 @@ trait BasePasswordReset extends MailTokenBasedOperations {
       ).verifying(Messages(BaseRegistration.PasswordsDoNotMatch), passwords => passwords._1 == passwords._2)
   )
 
-  implicit val CSRFAddToken: CSRFAddToken
+  val csrfAddToken: CSRFAddToken
+  val csrfCheck: CSRFCheck
 
   /**
    * Renders the page that starts the password reset flow
    */
-  def startResetPassword = CSRFAddToken {
+  def startResetPassword = csrfAddToken {
     Action {
       implicit request =>
         Ok(env.viewTemplates.getStartResetPasswordPage(startForm))
     }
   }
 
-  implicit val CSRFCheck: CSRFCheck
-
   /**
    * Handles form submission for the start page
    */
-  def handleStartResetPassword = CSRFCheck {
+  def handleStartResetPassword = csrfCheck {
     Action.async {
       implicit request =>
         startForm.bindFromRequest.fold(
@@ -103,7 +109,7 @@ trait BasePasswordReset extends MailTokenBasedOperations {
    *
    * @param token the token that identifies the user request
    */
-  def resetPassword(token: String) = CSRFAddToken {
+  def resetPassword(token: String) = csrfAddToken {
     Action.async {
       implicit request =>
         executeForToken(token, false, {
@@ -118,13 +124,14 @@ trait BasePasswordReset extends MailTokenBasedOperations {
    *
    * @param token the token that identifies the user request
    */
-  def handleResetPassword(token: String) = CSRFCheck {
+  def handleResetPassword(token: String) = csrfCheck {
     Action.async { implicit request =>
       import scala.concurrent.ExecutionContext.Implicits.global
       executeForToken(token, false, {
         t =>
-          changePasswordForm.bindFromRequest.fold(errors =>
-            Future.successful(BadRequest(env.viewTemplates.getResetPasswordPage(errors, token))),
+          changePasswordForm.bindFromRequest.fold(
+            errors =>
+              Future.successful(BadRequest(env.viewTemplates.getResetPasswordPage(errors, token))),
             p =>
               env.userService.findByEmailAndProvider(t.email, UsernamePasswordProvider.UsernamePassword).flatMap {
                 case Some(profile) =>

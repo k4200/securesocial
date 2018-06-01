@@ -75,7 +75,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
         } else {
             throw new RuntimeException("Unknown mode");
         }
-        return CompletableFuture.completedFuture(result);
+        return new CompletableFuture().completedFuture(result);
     }
 
     @Override
@@ -102,13 +102,13 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
             }
         }
         if (!alreadyLinked) target.identities.add(to);
-        return CompletableFuture.completedFuture(target);
+        return new CompletableFuture().completedFuture(target);
     }
 
     @Override
     public CompletionStage<Token> doSaveToken(Token token) {
         tokens.put(token.uuid, token);
-        return CompletableFuture.completedFuture(token);
+        return new CompletableFuture().completedFuture(token);
     }
 
     @Override
@@ -127,7 +127,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
             }
         }
 
-        return CompletableFuture.completedFuture(found);
+        return new CompletableFuture().completedFuture(found);
     }
 
     @Override
@@ -142,7 +142,7 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
 
     @Override
     public CompletionStage<Token> doFindToken(String tokenId) {
-        return CompletableFuture.completedFuture(tokens.get(tokenId));
+        return new CompletableFuture().completedFuture(tokens.get(tokenId));
     }
 
 
@@ -159,12 +159,12 @@ public class InMemoryUserService extends BaseUserService<DemoUser> {
             }
         }
 
-        return CompletableFuture.completedFuture(found);
+        return new CompletableFuture().completedFuture(found);
     }
 
     @Override
     public CompletionStage<Token> doDeleteToken(String uuid) {
-        return CompletableFuture.completedFuture(tokens.remove(uuid));
+        return new CompletableFuture().completedFuture(tokens.remove(uuid));
     }
 
     @Override

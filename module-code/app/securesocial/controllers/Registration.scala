@@ -21,7 +21,7 @@ import javax.inject.Inject
 import play.api.{ Environment, Configuration }
 import play.api.data.Forms._
 import play.api.data._
-import play.api.i18n.Messages
+import play.api.i18n.{ Messages, MessagesApi }
 import play.api.mvc.Action
 import play.filters.csrf.{ CSRFCheck, _ }
 import securesocial.core._
@@ -37,12 +37,18 @@ import scala.concurrent.{ Await, Future }
  *
  * @param env the environment
  */
-class Registration @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment, val CSRFAddToken: CSRFAddToken, val CSRFCheck: CSRFCheck) extends BaseRegistration
+class Registration @Inject() (
+  override implicit val env: RuntimeEnvironment,
+  // TODO: apply upstream changes
+  override val configuration: Configuration,
+  val playEnv: Environment,
+  val csrfAddToken: CSRFAddToken,
+  val csrfCheck: CSRFCheck
+) extends BaseRegistration
 
 /**
  * A trait that provides the means to handle user registration
  *
- * @tparam U the user type
  */
 trait BaseRegistration extends MailTokenBasedOperations {
 
@@ -91,12 +97,13 @@ trait BaseRegistration extends MailTokenBasedOperations {
 
   val form = if (env.usernamePasswordProviderConfigurations.withUserNameSupport) formWithUsername else formWithoutUsername
 
-  implicit val CSRFAddToken: CSRFAddToken
+  val csrfAddToken: CSRFAddToken
+  val csrfCheck: CSRFCheck
 
   /**
    * Starts the sign up process
    */
-  def startSignUp = CSRFAddToken {
+  def startSignUp = csrfAddToken {
     Action {
       implicit request =>
         if (enableRefererAsOriginalUrl) {
@@ -107,9 +114,7 @@ trait BaseRegistration extends MailTokenBasedOperations {
     }
   }
 
-  implicit val CSRFCheck: CSRFCheck
-
-  def handleStartSignUp = CSRFCheck {
+  def handleStartSignUp = csrfCheck {
     Action.async {
       implicit request =>
         startForm.bindFromRequest.fold(
@@ -143,7 +148,7 @@ trait BaseRegistration extends MailTokenBasedOperations {
    *
    * @return
    */
-  def signUp(token: String) = CSRFAddToken {
+  def signUp(token: String) = csrfAddToken {
     Action.async {
       implicit request =>
         logger.debug("[securesocial] trying sign up with token %s".format(token))
@@ -157,7 +162,7 @@ trait BaseRegistration extends MailTokenBasedOperations {
   /**
    * Handles posts from the sign up page
    */
-  def handleSignUp(token: String) = CSRFCheck {
+  def handleSignUp(token: String) = csrfCheck {
     Action.async {
       implicit request =>
         executeForToken(token, true, {
@@ -213,7 +218,8 @@ trait BaseRegistration extends MailTokenBasedOperations {
                   }
                 }
                 result.flatMap(f => f)
-              })
+              }
+            )
         })
     }
   }

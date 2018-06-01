@@ -99,8 +99,7 @@ public class Application extends Controller {
      * Sample use of SecureSocial.currentUser. Access the /current-user to test it
      */
     public CompletionStage<Result> currentUser() {
-        return SecureSocial.currentUser(env).thenApplyAsync(new Function<Object, Result>() {
-            @Override
+        return SecureSocial.currentUser(env).thenApply( new Function<Object, Result>() {
             public Result apply(Object maybeUser) {
                 String id;
 

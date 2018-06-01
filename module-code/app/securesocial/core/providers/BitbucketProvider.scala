@@ -28,7 +28,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import BitbucketProvider.{ ErrorResponse, UserResponse }
 
 class BitbucketOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+    httpService: HttpService, settings: OAuth2Settings
+)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
   override def exchangeCodeForToken(code: String, callBackUrl: String, builder: OAuth2InfoBuilder): Future[OAuth2Info] = {
     val params = Map(
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
@@ -45,9 +46,11 @@ class BitbucketOAuth2Client(
 /**
  * A Bitbucket provider
  */
-class BitbucketProvider(routesService: RoutesService,
+class BitbucketProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)
+  client: OAuth2Client
+)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.bitbucket.org/2.0/user?access_token=%s"
 
@@ -93,11 +96,13 @@ object BitbucketProvider {
   case class ErrorResponse(
     message: String,
     detail: String,
-    id: Option[String])
+    id: Option[String]
+  )
   case class UserResponse(
     uuid: String,
     display_name: String,
-    username: String)
+    username: String
+  )
 
   def apply(routesService: RoutesService, cacheService: CacheService, dummyClient: OAuth2Client)(implicit executionContext: ExecutionContext): BitbucketProvider = {
     val client = new BitbucketOAuth2Client(dummyClient.httpService, dummyClient.settings)

@@ -70,10 +70,9 @@ pomExtra := (
   </developers>
 )
 
-scalacOptions := Seq("-encoding", "UTF-8", "-Xlint", "-deprecation", "-unchecked", "-feature")
+scalacOptions := Seq("-encoding", "UTF-8", "-Xlint", "-deprecation", "-unchecked", "-feature", "-Xmax-classfile-name","78")
 
-// not adding -Xlint:unchecked for now, will do it once I improve the Java API
-javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-encoding", "UTF-8",  "-Xlint:-options")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8", "-encoding", "UTF-8",  "-Xlint:-options", "-Xlint:unchecked", "-Xlint:deprecation" )
 
 // packagedArtifacts += ((artifact in playPackageAssets).value -> playPackageAssets.value)
 

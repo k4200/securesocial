@@ -24,10 +24,7 @@ import securesocial.core.PasswordInfo;
 import securesocial.core.providers.MailToken;
 import securesocial.core.services.SaveMode;
 import securesocial.core.services.UserService;
-
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-
 import static scala.compat.java8.FutureConverters.toScala;
 
 /**
@@ -46,12 +43,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      */
     @Override
     public Future<Option<BasicProfile>> find(String providerId, String userId) {
-        return toScala(doFind(providerId, userId).thenApplyAsync(new Function<BasicProfile, Option<BasicProfile>>() {
-            @Override
-            public Option<BasicProfile> apply(BasicProfile user) {
-                return Scala.Option(user);
-            }
-        }));
+        return toScala(doFind(providerId, userId).thenApply(Scala::Option));
     }
 
     public Future<Option<BasicProfile>> find(String providerId, String userId, Messages messages) {
@@ -70,11 +62,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      */
     @Override
     public Future<Option<BasicProfile>> findByEmailAndProvider(String email, String providerId) {
-        return toScala(doFindByEmailAndProvider(email, providerId).thenApplyAsync(new Function<BasicProfile, Option<BasicProfile>>() {
-            public Option<BasicProfile> apply(BasicProfile user) {
-                return Scala.Option(user);
-            }
-        }));
+        return toScala(doFindByEmailAndProvider(email, providerId).thenApply(Scala::Option));
     }
 
     /**
@@ -126,22 +114,13 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     @Override
     public Future<scala.Option<PasswordInfo>> passwordInfoFor(U user) {
-        return toScala(doPasswordInfoFor(user).thenApplyAsync(new Function<PasswordInfo, Option<PasswordInfo>>() {
-            @Override
-            public Option<PasswordInfo> apply(PasswordInfo passwordInfo) {
-                return Scala.Option(passwordInfo);
-            }
-        }));
+        return toScala(doPasswordInfoFor(user).thenApply(Scala::Option));
     }
 
     @Override
     public Future<scala.Option<BasicProfile>> updatePasswordInfo(U user, PasswordInfo info) {
-        return toScala(doUpdatePasswordInfo(user, info).thenApplyAsync(new Function<BasicProfile, Option<BasicProfile>>() {
-            @Override
-            public Option<BasicProfile> apply(BasicProfile basicProfile) {
-                return Scala.Option(basicProfile);
-            }
-        }));
+        return toScala(doUpdatePasswordInfo(user, info).thenApply(Scala::Option));
+
     }
 
     /**
@@ -156,12 +135,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      */
     @Override
     public Future<MailToken> saveToken(MailToken mailToken) {
-        return toScala(doSaveToken(Token.fromScala(mailToken)).thenApplyAsync(new Function<Token, MailToken>() {
-            @Override
-            public MailToken apply(Token token) {
-                return token.toScala();
-            }
-        }));
+        return toScala(doSaveToken(Token.fromScala(mailToken)).thenApply(Token::toScala));
     }
 
     /**
@@ -170,18 +144,12 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
-     * @param token the token id
+     * @param tokenId the token id
      * @return
      */
     @Override
-    public Future<Option<MailToken>> findToken(String token) {
-        return toScala(doFindToken(token).thenApplyAsync(new Function<Token, Option<MailToken>>() {
-            @Override
-            public Option<MailToken> apply(Token token) {
-                MailToken scalaToken = token != null ? token.toScala() : null;
-                return Scala.Option(scalaToken);
-            }
-        }));
+    public Future<Option<MailToken>> findToken(String tokenId) {
+        return toScala(doFindToken(tokenId).thenApply(this::toMailToken));
     }
 
     /**
@@ -190,17 +158,16 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
-     * @param uuid the token id
+     * @param tokenId the token id
      */
     @Override
-    public Future<scala.Option<MailToken>> deleteToken(String uuid) {
-        return toScala(doDeleteToken(uuid).thenApplyAsync(new Function<Token, Option<MailToken>>() {
-            @Override
-            public Option<MailToken> apply(Token token) {
-                MailToken scalaToken = token != null ? token.toScala() : null;
-                return Scala.Option(scalaToken);
-            }
-        }));
+    public Future<scala.Option<MailToken>> deleteToken(String tokenId) {
+        return toScala(doDeleteToken(tokenId).thenApply(this::toMailToken));
+    }
+
+    private Option<MailToken> toMailToken(Token token) {
+        MailToken mailToken =  token  != null ? token.toScala() : null;
+        return Scala.Option(mailToken);
     }
 
     /**

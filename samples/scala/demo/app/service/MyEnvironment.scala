@@ -17,10 +17,11 @@ package service
  *
  */
 
+import javax.inject.{ Inject, Singleton }
+
 import akka.actor.ActorSystem
-import com.google.inject.{ Inject, Singleton }
 import controllers.CustomRoutesService
-import play.api.i18n.{ MessagesApi, Messages }
+import play.api.i18n.MessagesApi
 import play.api.libs.mailer.MailerClient
 import play.api.libs.ws.WSClient
 import play.api.mvc.RequestHeader
@@ -30,7 +31,8 @@ import securesocial.core.authenticator.{ HttpHeaderAuthenticatorConfigurations, 
 import securesocial.core.providers.UsernamePasswordProviderConfigurations
 import securesocial.core.{ ServiceInfoHelper, BasicProfile, RuntimeEnvironment }
 
-class MyEnvironment @Inject() ()(implicit val configuration: Configuration, implicit val playEnv: Environment, val cacheApi: CacheApi, val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
+@Singleton
+class MyEnvironment @Inject() (override val configuration: Configuration, implicit val playEnv: Environment, val cacheApi: CacheApi, override val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
   override type U = DemoUser
   override implicit val executionContext = play.api.libs.concurrent.Execution.defaultContext
   override lazy val routes = new CustomRoutesService()
@@ -41,8 +43,3 @@ class MyEnvironment @Inject() ()(implicit val configuration: Configuration, impl
   val serviceInfoHelper = new ServiceInfoHelper.Default
   val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default
 }
-
-/*
-class MyBasicEnvironment @Inject() (val env: MyEnvironment[U]) extends RuntimeEnvironment.Default[U] {
-  override lazy val userService: InMemoryUserService = env.userService
-}*/

@@ -18,20 +18,20 @@ package securesocial.controllers
 
 import javax.inject.Inject
 
-import play.api.{ Configuration, Application, Environment }
-import play.filters.csrf.CSRFAddToken
+import play.api.{ Configuration, Environment }
 import securesocial.core._
-import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.utils._
+import providers.UsernamePasswordProvider
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
+import play.filters.csrf.CSRFAddToken
 
 /**
  * A default Login controller that uses BasicProfile as the user type.
  *
  * @param env An environment
  */
-class LoginPage @Inject() (override implicit val env: RuntimeEnvironment, override val configuration: Configuration, override val playEnv: Environment, val CSRFAddToken: CSRFAddToken) extends BaseLoginPage
+class LoginPage @Inject() (override implicit val env: RuntimeEnvironment, override val configuration: Configuration, override val playEnv: Environment, val csrfAddToken: CSRFAddToken) extends BaseLoginPage
 
 /**
  * The trait that defines the login page controller
@@ -44,14 +44,16 @@ trait BaseLoginPage extends SecureSocial {
    */
   val onLogoutGoTo = "securesocial.onLogoutGoTo"
 
-  implicit val CSRFAddToken: CSRFAddToken
+  val csrfAddToken: CSRFAddToken
+  // TODO: apply upstream changes
+  //val configuration: Configuration = env.configuration
 
   /**
    * Renders the login page
    *
    * @return
    */
-  def login = CSRFAddToken {
+  def login = csrfAddToken {
     UserAwareAction { implicit request =>
       if (request.user.isDefined) {
         // if the user is already logged in, a referer is set and we handle the
@@ -61,7 +63,7 @@ trait BaseLoginPage extends SecureSocial {
           SecureSocial.refererPathAndQuery
         } else {
           None
-        }).getOrElse(ProviderControllerHelper.landingUrl)
+        }).getOrElse(ProviderControllerHelper.landingUrl(configuration))
         logger.debug("User already logged in, skipping login page. Redirecting to %s".format(to))
         Redirect(to)
       } else {
@@ -88,7 +90,7 @@ trait BaseLoginPage extends SecureSocial {
         authenticator <- request.authenticator
       } yield {
         redirectTo.discardingAuthenticator(authenticator).map {
-          _.withSession(Events.fire(new LogoutEvent(user)).getOrElse(request.session))
+          _.withSession(Events.fire(LogoutEvent(user)).getOrElse(request.session))
         }
       }
       result.getOrElse {

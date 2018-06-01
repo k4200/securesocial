@@ -56,7 +56,8 @@ object OAuth2Client {
         (OAuth2Constants.ClientId, settings.clientId),
         (OAuth2Constants.RedirectUri, redirectUri),
         (OAuth2Constants.ResponseType, OAuth2Constants.Code),
-        (OAuth2Constants.State, state))
+        (OAuth2Constants.State, state)
+      )
       settings.scope.foreach(s => {
         params = (OAuth2Constants.Scope, s) :: params
       })
@@ -229,7 +230,8 @@ object OAuth2Provider {
   abstract class Base(
       val routesService: RoutesService,
       val client: OAuth2Client,
-      val cacheService: CacheService) extends OAuth2Provider {
+      val cacheService: CacheService
+  ) extends OAuth2Provider {
     protected implicit val executionContext: ExecutionContext = client.executionContext
     protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   }

@@ -50,5 +50,6 @@ class OAuth2ClientSpec extends Specification with Mockito {
     }
   }
   val fakeOAuth2Settings = new OAuth2Settings(
-    "authorizationUrl", "accessTokenUrl", "clientId", "clientSecret", Some("scope"), Map.empty, Map.empty)
+    "authorizationUrl", "accessTokenUrl", "clientId", "clientSecret", Some("scope"), Map.empty, Map.empty
+  )
 }
