@@ -16,7 +16,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.json.JsObject
 import play.api.libs.ws.WSResponse
 import securesocial.core._
@@ -29,7 +28,7 @@ import scala.concurrent.Future
  */
 class FacebookProvider(routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
+  client: OAuth2Client)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture.type(large),email&return_ssl_resources=1&access_token="
   val Error = "error"

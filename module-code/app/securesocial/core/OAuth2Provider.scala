@@ -19,7 +19,7 @@ package securesocial.core
 import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
-import play.api.{ Environment, Configuration, Application }
+import play.api.Configuration
 import play.api.libs.json.{ JsError, JsSuccess, JsValue, Json }
 import play.api.libs.ws.WSResponse
 import play.api.mvc._
@@ -230,8 +230,6 @@ object OAuth2Provider {
       val routesService: RoutesService,
       val client: OAuth2Client,
       val cacheService: CacheService) extends OAuth2Provider {
-    private implicit val implicitConf = configuration
-    protected implicit val playEnv: Environment
     protected implicit val executionContext: ExecutionContext = client.executionContext
     protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   }
@@ -255,11 +253,11 @@ object OAuth2Settings {
 }
 
 trait OAuth2SettingsBuilder {
-  def forProvider(id: String): OAuth2Settings
+  def forProvider(id: String)(implicit configuration: Configuration): OAuth2Settings
 }
 
 object OAuth2SettingsBuilder {
-  class Default(implicit val configuration: Configuration, implicit val environment: Environment) extends OAuth2SettingsBuilder {
+  class Default extends OAuth2SettingsBuilder {
     implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
     /**
      * Helper method to create an OAuth2Settings instance from the properties file.
@@ -267,7 +265,7 @@ object OAuth2SettingsBuilder {
      * @param id the provider id
      * @return an OAuth2Settings instance
      */
-    def forProvider(id: String): OAuth2Settings = {
+    def forProvider(id: String)(implicit configuration: Configuration): OAuth2Settings = {
       val propertyKey = s"securesocial.$id."
 
       val result = for {

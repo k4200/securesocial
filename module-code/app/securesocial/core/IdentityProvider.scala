@@ -28,7 +28,6 @@ import scala.concurrent.Future
 abstract class IdentityProvider {
   private val logger = play.api.Logger("securesocial.core.IdentityProvider")
 
-  protected implicit val configuration: Configuration
   protected implicit val identityProviderConfigurations: IdentityProviderConfigurations
 
   /**
@@ -64,7 +63,7 @@ abstract class IdentityProvider {
    * @param property
    * @return
    */
-  def loadProperty(providerId: String, property: String, optional: Boolean = false): Option[String] = {
+  def loadProperty(providerId: String, property: String, optional: Boolean = false)(implicit configuration: Configuration): Option[String] = {
     identityProviderConfigurations.loadProperty(providerId, property, optional)
   }
 
@@ -73,35 +72,36 @@ abstract class IdentityProvider {
   }
 }
 
+case class SslEnabled(value: Boolean) extends AnyVal
+object SslEnabled {
+  private val logger = play.api.Logger("securesocial.core.SslEnabled")
+
+  def apply(environment: Environment, configuration: Configuration): SslEnabled = {
+    val result = configuration.getBoolean("securesocial.ssl").getOrElse(false)
+    if (!result && environment.mode == Mode.Prod) {
+      logger.warn(
+        "[securesocial] IMPORTANT: Play is running in production mode but you did not turn SSL on for SecureSocial." +
+          "Not using SSL can make it really easy for an attacker to steal your users' credentials and/or the " +
+          "authenticator cookie and gain access to the system."
+      )
+    }
+    SslEnabled(result)
+  }
+}
+
 object IdentityProvider {
   val SessionId = "sid"
 }
 
 trait IdentityProviderConfigurations {
-  val configuration: Configuration
-  val environment: Environment
-  val sslEnabled: Boolean
-  def loadProperty(providerId: String, property: String, optional: Boolean = false): Option[String]
+  def loadProperty(providerId: String, property: String, optional: Boolean = false)(implicit configuration: Configuration): Option[String]
   def throwMissingPropertiesException(id: String)
 }
 
 object IdentityProviderConfigurations {
-  class Default(implicit val configuration: Configuration, @transient implicit val environment: Environment) extends IdentityProviderConfigurations with Serializable {
+  class Default extends IdentityProviderConfigurations with Serializable {
     @transient
     private val logger = play.api.Logger("securesocial.core.IdentityProvider")
-
-    // todo: do I want this here?
-    val sslEnabled: Boolean = {
-      val result = configuration.getBoolean("securesocial.ssl").getOrElse(false)
-      if (!result && environment.mode == Mode.Prod) {
-        logger.warn(
-          "[securesocial] IMPORTANT: Play is running in production mode but you did not turn SSL on for SecureSocial." +
-            "Not using SSL can make it really easy for an attacker to steal your users' credentials and/or the " +
-            "authenticator cookie and gain access to the system."
-        )
-      }
-      result
-    }
 
     /**
      * Reads a property from the application.conf
@@ -109,7 +109,7 @@ object IdentityProviderConfigurations {
      * @param property
      * @return
      */
-    def loadProperty(providerId: String, property: String, optional: Boolean = false): Option[String] = {
+    def loadProperty(providerId: String, property: String, optional: Boolean = false)(implicit configuration: Configuration): Option[String] = {
       val key = s"securesocial.$providerId.$property"
       val result = configuration.getString(key)
       if (!result.isDefined && !optional) {

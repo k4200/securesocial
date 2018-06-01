@@ -16,7 +16,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import securesocial.core._
 import securesocial.core.providers.LinkedInOAuth2Provider._
 import securesocial.core.services.{ CacheService, RoutesService }
@@ -28,7 +27,7 @@ import scala.concurrent.Future
  */
 class LinkedInOAuth2Provider(routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
+  client: OAuth2Client)
     extends OAuth2Provider.Base(routesService, client, cacheService) {
   override val id = LinkedInOAuth2Provider.LinkedIn
 

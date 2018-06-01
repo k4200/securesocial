@@ -18,7 +18,7 @@ package securesocial.core.providers
 
 import securesocial.core._
 import play.api.libs.oauth.{ RequestToken, OAuthCalculator }
-import play.api.{ Environment, Configuration, Logger }
+import play.api.Logger
 import TwitterProvider._
 import scala.concurrent.{ ExecutionContext, Future }
 import securesocial.core.services.{ RoutesService, CacheService, HttpService }
@@ -29,7 +29,7 @@ import securesocial.core.services.{ RoutesService, CacheService, HttpService }
 class TwitterProvider(
   routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth1Client)(implicit val configuration: Configuration, val playEnv: Environment) extends OAuth1Provider(
+  client: OAuth1Client) extends OAuth1Provider(
   routesService,
   cacheService,
   client
