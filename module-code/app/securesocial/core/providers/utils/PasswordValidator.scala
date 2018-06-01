@@ -55,8 +55,10 @@ object PasswordValidator {
    * The minimum length can be configured setting a minimumPasswordLength property for userpass.
    * Defaults to 8 if not specified.
    */
-  class Default()(implicit val configuration: Configuration) extends PasswordValidator {
-    val requiredLength = configuration.getInt(Default.PasswordLengthProperty).getOrElse(Default.Length)
+  class Default(requiredLength: Int) extends PasswordValidator {
+    def this()(implicit configuration: Configuration) = this({
+      configuration.getInt(Default.PasswordLengthProperty).getOrElse(Default.Length)
+    })
 
     override def validate(password: String): Either[(String, Seq[Any]), Unit] = {
       if (password.length >= requiredLength) {
