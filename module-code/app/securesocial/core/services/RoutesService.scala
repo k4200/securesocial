@@ -105,10 +105,9 @@ object RoutesService {
    * The default RoutesService implementation.  It points to the routes
    * defined by the built in controllers.
    */
-  class Default(val configuration: Configuration, val playEnv: Environment) extends RoutesService {
+  class Default(configuration: Configuration, playEnv: Environment) extends RoutesService {
     private val logger = play.api.Logger("securesocial.core.DefaultRoutesService")
     val sslEnabled = SslEnabled(playEnv, configuration)
-
     val FaviconKey = "securesocial.faviconPath"
     val JQueryKey = "securesocial.jqueryPath"
     val BootstrapCssKey = "securesocial.bootstrapCssPath"
@@ -116,9 +115,16 @@ object RoutesService {
     val DefaultFaviconPath = "images/favicon.png"
     val DefaultJqueryPath = "javascripts/jquery-1.7.1.min.js"
     val DefaultBootstrapCssPath = "bootstrap/css/bootstrap.min.css"
+    val ApplicationHostKey = "securesocial.applicationHost"
+    val ApplicationPortKey = "securesocial.applicationPort"
+    private lazy val applicationHost = configuration.getString(ApplicationHostKey).getOrElse {
+      throw new RuntimeException(s"Missing property: $ApplicationHostKey")
+    }
+    private lazy val applicationPort = configuration.getInt(ApplicationPortKey).map(port => s":$port").getOrElse("")
+    private lazy val hostAndPort = s"$applicationHost$applicationPort"
 
     protected def absoluteUrl(call: Call)(implicit req: RequestHeader): String = {
-      call.absoluteURL(sslEnabled.value)
+      call.absoluteURL(sslEnabled.value, hostAndPort)
     }
 
     override def loginPageUrl(implicit req: RequestHeader): String = {
