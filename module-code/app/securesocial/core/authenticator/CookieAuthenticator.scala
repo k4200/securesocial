@@ -200,7 +200,7 @@ trait CookieAuthenticatorConfigurations extends StoreBackedAuthenticatorConfigur
 }
 
 object CookieAuthenticatorConfigurations {
-  class Default(implicit val configuration: Configuration, @transient val playEnv: Environment) extends CookieAuthenticatorConfigurations with Serializable {
+  class Default(val configuration: Configuration, val playEnv: Environment) extends CookieAuthenticatorConfigurations with Serializable {
     lazy val cookieName = configuration.getString(CookieNameKey).getOrElse(DefaultCookieName)
     lazy val cookiePath = configuration.getString(CookiePathKey).getOrElse(
       configuration.getString(ApplicationContext).getOrElse(DefaultCookiePath)

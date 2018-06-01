@@ -130,7 +130,7 @@ trait UsernamePasswordProviderConfigurations {
 }
 
 object UsernamePasswordProviderConfigurations {
-  class Default(implicit val configuration: Configuration) extends UsernamePasswordProviderConfigurations {
+  class Default(val configuration: Configuration) extends UsernamePasswordProviderConfigurations {
     private val Key = "securesocial.userpass.withUserNameSupport"
     private val SendWelcomeEmailKey = "securesocial.userpass.sendWelcomeEmail"
     private val Hasher = "securesocial.userpass.hasher"

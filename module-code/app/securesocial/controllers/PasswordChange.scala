@@ -38,8 +38,6 @@ import play.filters.csrf._
  */
 class PasswordChange @Inject() (
   override implicit val env: RuntimeEnvironment,
-  val configuration: Configuration,
-  val playEnv: Environment,
   val csrfAddToken: CSRFAddToken,
   val csrfCheck: CSRFCheck
 ) extends BasePasswordChange
@@ -60,9 +58,7 @@ trait BasePasswordChange extends SecureSocial with I18nSupport {
 
   val csrfAddToken: CSRFAddToken
   val csrfCheck: CSRFCheck
-  // TODO: apply upstream changes
-  //val configuration: Configuration = env.configuration
-  //implicit val messagesApi: MessagesApi = env.messagesApi
+  val configuration: Configuration = env.configuration
 
   /**
    * The property that specifies the page the user is redirected to after changing the password.

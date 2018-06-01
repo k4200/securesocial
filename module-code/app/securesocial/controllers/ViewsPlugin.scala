@@ -134,7 +134,7 @@ object ViewTemplates {
   /**
    * The default views.
    */
-  class Default(env: RuntimeEnvironment)(implicit val configuration: Configuration) extends ViewTemplates {
+  class Default(env: RuntimeEnvironment)(implicit configuration: Configuration) extends ViewTemplates {
 
     implicit val implicitEnv = env
     implicit val implicitMessagesApi = env.messagesApi

@@ -39,9 +39,6 @@ import scala.concurrent.{ Await, Future }
  */
 class Registration @Inject() (
   override implicit val env: RuntimeEnvironment,
-  // TODO: apply upstream changes
-  override val configuration: Configuration,
-  val playEnv: Environment,
   val csrfAddToken: CSRFAddToken,
   val csrfCheck: CSRFCheck
 ) extends BaseRegistration

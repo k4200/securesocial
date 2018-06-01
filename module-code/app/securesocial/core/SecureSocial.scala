@@ -38,22 +38,16 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait SecureSocial extends Controller with I18nSupport {
   import SecureSocial._
 
-  implicit val configuration: Configuration
-
   implicit val env: RuntimeEnvironment
 
-  implicit val playEnv: Environment
-
   implicit def executionContext: ExecutionContext = env.executionContext
+  implicit val messagesApi: MessagesApi = env.messagesApi
 
   protected val notAuthenticatedJson = Unauthorized(Json.toJson(Map("error" -> "Credentials required"))).as(JSON)
 
   protected val notAuthorizedJson = Forbidden(Json.toJson(Map("error" -> "Not authorized"))).as(JSON)
 
   protected def notAuthorizedPage()(implicit request: RequestHeader): Html = env.viewTemplates.getNotAuthorizedPage
-
-  @Inject
-  implicit var messagesApi: MessagesApi = null
 
   protected def notAuthenticatedResult[A](implicit request: Request[A]): Future[Result] = {
     Future.successful {
@@ -171,7 +165,7 @@ trait SecureSocial extends Controller with I18nSupport {
   }
 
   val enableRefererAsOriginalUrl = {
-    configuration.getBoolean("securesocial.enableRefererAsOriginalUrl").getOrElse(false)
+    env.configuration.getBoolean("securesocial.enableRefererAsOriginalUrl").getOrElse(false)
   }
 }
 

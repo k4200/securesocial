@@ -34,9 +34,9 @@ class MyEnvironment @Inject() (override val configuration: Configuration, implic
   type U = DemoUser
   override val userService: UserService[U] = new InMemoryUserService()
 
-  val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default()
-  val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default()
+  val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default(configuration, playEnv)
+  val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default(configuration, playEnv)
   val serviceInfoHelper = new ServiceInfoHelper.Default
-  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default
+  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default(configuration)
 
 }

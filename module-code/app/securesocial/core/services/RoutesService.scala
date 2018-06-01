@@ -97,8 +97,6 @@ trait RoutesService {
   def bootstrapCssPath: Call
 
   def customCssPath: Option[Call]
-
-  val configuration: Configuration
 }
 
 object RoutesService {
@@ -107,7 +105,7 @@ object RoutesService {
    * The default RoutesService implementation.  It points to the routes
    * defined by the built in controllers.
    */
-  class Default(implicit override val configuration: Configuration, val playEnv: Environment) extends RoutesService {
+  class Default(val configuration: Configuration, val playEnv: Environment) extends RoutesService {
     private val logger = play.api.Logger("securesocial.core.DefaultRoutesService")
     val sslEnabled = SslEnabled(playEnv, configuration)
 

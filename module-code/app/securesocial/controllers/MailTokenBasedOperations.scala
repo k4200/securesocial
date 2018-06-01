@@ -43,8 +43,6 @@ abstract class MailTokenBasedOperations extends SecureSocial with I18nSupport {
   val DefaultDuration = 60
   val configuration: Configuration = env.configuration
   val TokenDuration = configuration.getInt(TokenDurationKey).getOrElse(DefaultDuration)
-  // TODO: apply upstream changes
-  //implicit val messagesApi: MessagesApi = env.messagesApi
 
   val startForm = Form(
     Email -> email.verifying(nonEmpty)

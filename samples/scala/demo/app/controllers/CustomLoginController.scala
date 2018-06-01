@@ -10,13 +10,13 @@ import play.filters.csrf.CSRFAddToken
 import securesocial.core.{ IdentityProvider, RuntimeEnvironment }
 import securesocial.core.services.RoutesService
 
-class CustomLoginController @Inject() (val configuration: Configuration, val playEnv: Environment, val csrfAddToken: CSRFAddToken, implicit override val env: RuntimeEnvironment) extends BaseLoginPage {
+class CustomLoginController @Inject() (val csrfAddToken: CSRFAddToken, implicit override val env: RuntimeEnvironment) extends BaseLoginPage {
   override def login: Action[AnyContent] = {
     Logger.debug("using CustomLoginController")
     super.login
   }
 }
 
-class CustomRoutesService(implicit override val configuration: Configuration, override val playEnv: Environment) extends RoutesService.Default {
+class CustomRoutesService(configuration: Configuration, playEnv: Environment) extends RoutesService.Default(configuration, playEnv) {
   override def loginPageUrl(implicit req: RequestHeader): String = controllers.routes.CustomLoginController.login().absoluteURL(sslEnabled.value)
 }

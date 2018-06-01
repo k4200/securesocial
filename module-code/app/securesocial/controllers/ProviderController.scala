@@ -32,8 +32,7 @@ import scala.concurrent.Future
 /**
  * A default controller that uses the BasicProfile as the user type
  */
-// TODO: apply upstream changes
-class ProviderController @Inject() (implicit val env: RuntimeEnvironment, override val configuration: Configuration, val playEnv: Environment)
+class ProviderController @Inject() (implicit val env: RuntimeEnvironment)
   extends BaseProviderController
 
 /**
@@ -45,8 +44,6 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
   val logger = play.api.Logger(this.getClass.getName)
 
   val configuration: Configuration = env.configuration
-  // TODO: apply upstream changes
-  //  implicit val messagesApi: MessagesApi = env.messagesApi
 
   /**
    * The authentication entry point for GET requests

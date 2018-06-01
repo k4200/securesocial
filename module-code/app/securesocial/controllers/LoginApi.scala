@@ -32,7 +32,7 @@ import securesocial.core.services.SaveMode
 /**
  * A default controller that uses the BasicProfile as the application user type.
  */
-class LoginApi @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment) extends BaseLoginApi
+class LoginApi @Inject() (implicit val env: RuntimeEnvironment) extends BaseLoginApi
 
 /**
  * This trait provides the means to provide an authentication API that can be used by client side or mobile apps.

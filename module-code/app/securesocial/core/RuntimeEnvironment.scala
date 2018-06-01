@@ -22,10 +22,8 @@ trait RuntimeEnvironment {
 
   type U
 
-  implicit val configuration: Configuration
   implicit val cacheApi: CacheApi
   implicit val playEnv: Environment
-  implicit val messagesApi: MessagesApi
   implicit val WS: WSClient
   implicit val mailerClient: MailerClient
   implicit val actorSystem: ActorSystem
@@ -61,10 +59,9 @@ trait RuntimeEnvironment {
 
   implicit def executionContext: ExecutionContext
 
-  // TODO: apply upstream changes
-  //def configuration: Configuration
-  //
-  //def messagesApi: MessagesApi
+  def configuration: Configuration
+
+  def messagesApi: MessagesApi
 
   /**
    * Factory method for IdentityProvider
@@ -104,7 +101,7 @@ trait RuntimeEnvironment {
       case BitbucketProvider.Bitbucket =>
         BitbucketProvider(routes, cacheService, oauth2ClientFor(BitbucketProvider.Bitbucket, customOAuth2Settings))
       case BacklogProvider.Backlog =>
-        new BacklogProvider(routes, cacheService, httpService, miscParam)
+        new BacklogProvider(routes, cacheService, httpService, miscParam)(executionContext, configuration)
       case LinkedInProvider.LinkedIn =>
         new LinkedInProvider(routes, cacheService, oauth1ClientFor(LinkedInProvider.LinkedIn))
       case TwitterProvider.Twitter =>
@@ -119,10 +116,10 @@ trait RuntimeEnvironment {
     }
   }
 
-  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(serviceInfoHelper.forProvider(provider), httpService)
+  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(serviceInfoHelper.forProvider(provider)(configuration), httpService)
   protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None): OAuth2Client = {
     val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
-    val settings = customSettings.getOrElse(oauth2SettingsBuilder.forProvider(provider))
+    val settings = customSettings.getOrElse(oauth2SettingsBuilder.forProvider(provider)(configuration))
     provider match {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkOAuth2Client(httpService, settings)
@@ -138,20 +135,20 @@ object RuntimeEnvironment {
    * You can start your app with with by only adding a userService to handle users.
    */
   abstract class Default extends RuntimeEnvironment {
-    override lazy val routes: RoutesService = new RoutesService.Default()
+    override lazy val routes: RoutesService = new RoutesService.Default(configuration, playEnv)
 
     override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)(configuration)
     override lazy val mailTemplates: MailTemplates = new MailTemplates.Default(this)
-    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates)
+    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates)(configuration, messagesApi, mailerClient, actorSystem)
 
-    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()
+    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()(configuration)
     override lazy val passwordHashers: Map[String, PasswordHasher] = Map(currentHasher.id -> currentHasher)
-    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default()
+    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default()(configuration)
 
     override lazy val httpService: HttpService = new HttpService.Default
     override lazy val cacheService: CacheService = new CacheService.Default
     override lazy val avatarService: Option[AvatarService] = Some(new AvatarService.Default(httpService))
-    override lazy val idGenerator: IdGenerator = new IdGenerator.Default()
+    override lazy val idGenerator: IdGenerator = new IdGenerator.Default()(configuration)
 
     override lazy val authenticatorService = new AuthenticatorService(
       new CookieAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, cookieAuthenticatorConfigurations),

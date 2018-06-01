@@ -32,16 +32,16 @@ import service.{ DemoUser, InMemoryUserService, MyEventListener }
 /**
  * The runtime environment for this sample app.
  */
-class MyRuntimeEnvironment(implicit val configuration: Configuration, val playEnv: Environment, val cacheApi: CacheApi, val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
+class MyRuntimeEnvironment(val configuration: Configuration, val playEnv: Environment, val cacheApi: CacheApi, val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
   type U = DemoUser
   override implicit val executionContext = play.api.libs.concurrent.Execution.defaultContext
-  override lazy val routes = new CustomRoutesService()
+  override lazy val routes = new CustomRoutesService(configuration, playEnv)
   override lazy val userService: InMemoryUserService = new InMemoryUserService()
   override lazy val eventListeners = List(new MyEventListener())
-  override val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default()
-  override val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default()
+  override val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default(configuration, playEnv)
+  override val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default(configuration, playEnv)
   val serviceInfoHelper = new ServiceInfoHelper.Default
-  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default
+  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default(configuration)
 }
 
 /**

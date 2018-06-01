@@ -17,13 +17,12 @@
 package securesocial.controllers
 
 import javax.inject.Inject
-
-import play.api.{ Configuration, Environment }
+import play.api.{Configuration, Environment}
 import securesocial.core._
 import securesocial.core.utils._
 import providers.UsernamePasswordProvider
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import play.filters.csrf.CSRFAddToken
 
 /**
@@ -31,7 +30,7 @@ import play.filters.csrf.CSRFAddToken
  *
  * @param env An environment
  */
-class LoginPage @Inject() (override implicit val env: RuntimeEnvironment, override val configuration: Configuration, override val playEnv: Environment, val csrfAddToken: CSRFAddToken) extends BaseLoginPage
+class LoginPage @Inject() (override implicit val env: RuntimeEnvironment, val csrfAddToken: CSRFAddToken) extends BaseLoginPage
 
 /**
  * The trait that defines the login page controller
@@ -45,8 +44,7 @@ trait BaseLoginPage extends SecureSocial {
   val onLogoutGoTo = "securesocial.onLogoutGoTo"
 
   val csrfAddToken: CSRFAddToken
-  // TODO: apply upstream changes
-  //val configuration: Configuration = env.configuration
+  val configuration: Configuration = env.configuration
 
   /**
    * Renders the login page

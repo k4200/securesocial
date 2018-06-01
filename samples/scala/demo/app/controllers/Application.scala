@@ -23,7 +23,7 @@ import service.{ MyEnvironment, MyEventListener, DemoUser }
 import play.api.{ Configuration, Environment }
 import play.api.mvc.{ Action, RequestHeader }
 
-class Application @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment) extends securesocial.core.SecureSocial {
+class Application @Inject() (implicit val env: RuntimeEnvironment) extends securesocial.core.SecureSocial {
   def index = SecuredAction { implicit request =>
     Ok(views.html.index(request.user.asInstanceOf[DemoUser].main))
   }

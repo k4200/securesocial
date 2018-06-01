@@ -132,10 +132,10 @@ trait HttpHeaderAuthenticatorConfigurations extends StoreBackedAuthenticatorConf
 }
 
 object HttpHeaderAuthenticatorConfigurations {
-  class Default(implicit val configuration: Configuration, environment: Environment) extends HttpHeaderAuthenticatorConfigurations {
+  class Default(configuration: Configuration, environment: Environment) extends HttpHeaderAuthenticatorConfigurations {
     lazy val headerName = configuration.getString(HeaderNameKey).getOrElse(DefaultHeaderName)
 
-    private lazy val cookieAuthenticatorConfigurations: CookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default()
+    private lazy val cookieAuthenticatorConfigurations: CookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default(configuration, environment)
     // using the same properties than the CookieBased authenticator for now.
     lazy val idleTimeout = cookieAuthenticatorConfigurations.idleTimeout
     lazy val absoluteTimeout = cookieAuthenticatorConfigurations.absoluteTimeout
