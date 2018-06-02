@@ -23,7 +23,7 @@ import play.api.i18n.{ I18nSupport, Messages }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
-import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.{ BacklogProvider, LinkedInProvider, TwitterProvider, UsernamePasswordProvider, XingProvider }
 import securesocial.core.services.SaveMode
 import securesocial.core.utils._
 
@@ -107,7 +107,7 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
    * @param miscParam
    */
   private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String]): Option[IdentityProvider] = provider match {
-    case UsernamePasswordProvider.UsernamePassword =>
+    case BacklogProvider.Backlog | LinkedInProvider.LinkedIn | TwitterProvider.Twitter | XingProvider.Xing | UsernamePasswordProvider.UsernamePassword =>
       Some(env.createProvider(provider, None, miscParam))
     case _ =>
       val settings = if (scope.isDefined) {
