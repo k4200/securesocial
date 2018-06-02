@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import play.filters.csrf.CSRFAddToken
 import securesocial.controllers.BaseLoginPage
 import play.api.mvc.{ Action, AnyContent, RequestHeader }
 import play.api.{ Configuration, Environment, Logger }

@@ -16,9 +16,6 @@
  */
 package securesocial.core.providers.utils
 
-import javax.inject.Inject
-
-import play.api.{ Configuration, Application }
 import play.api.data.validation.{ Constraint, Invalid, Valid }
 import securesocial.core.RuntimeEnvironment
 

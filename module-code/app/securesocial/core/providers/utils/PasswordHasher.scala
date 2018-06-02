@@ -16,8 +16,6 @@
  */
 package securesocial.core.providers.utils
 
-import javax.inject.Inject
-
 import securesocial.core.PasswordInfo
 import org.mindrot.jbcrypt._
 import play.api.Configuration

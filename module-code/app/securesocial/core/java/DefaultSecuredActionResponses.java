@@ -22,7 +22,6 @@ import play.mvc.Http;
 import play.mvc.Result;
 import play.twirl.api.Html;
 
-import javax.inject.Inject;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -33,9 +32,6 @@ import java.util.concurrent.CompletionStage;
  * @see securesocial.core.java.SecuredActionResponses
  */
 public class DefaultSecuredActionResponses extends Controller implements SecuredActionResponses {
-    @Inject
-    play.api.i18n.Messages messages = null;
-
     public Html notAuthorizedPage(Http.Context ctx) {
         return securesocial.views.html.notAuthorized.render(ctx._requestHeader(), ctx.messages().asScala(), SecureSocial.env());
     }
