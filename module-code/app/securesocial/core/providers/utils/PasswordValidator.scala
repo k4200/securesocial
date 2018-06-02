@@ -56,10 +56,6 @@ object PasswordValidator {
    * Defaults to 8 if not specified.
    */
   class Default(requiredLength: Int) extends PasswordValidator {
-    def this()(implicit configuration: Configuration) = this({
-      configuration.getInt(Default.PasswordLengthProperty).getOrElse(Default.Length)
-    })
-
     override def validate(password: String): Either[(String, Seq[Any]), Unit] = {
       if (password.length >= requiredLength) {
         Right(())
@@ -69,7 +65,6 @@ object PasswordValidator {
   }
 
   object Default {
-    val Length = 8
     val PasswordLengthProperty = "securesocial.userpass.minimumPasswordLength"
     val InvalidPasswordMessage = "securesocial.signup.invalidPassword"
   }

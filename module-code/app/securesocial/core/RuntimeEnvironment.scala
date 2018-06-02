@@ -1,11 +1,9 @@
 package securesocial.core
 
 import akka.actor.ActorSystem
-import play.api.i18n.{ MessagesApi, Messages }
-import play.api.libs.mailer.MailerClient
-import play.api.libs.ws.WSClient
 import play.api.{ Configuration, Environment }
-import play.api.cache.CacheApi
+import play.api.cache.AsyncCacheApi
+import play.api.i18n.MessagesApi
 import securesocial.controllers.{ MailTemplates, ViewTemplates }
 import securesocial.core.authenticator._
 import securesocial.core.providers._
@@ -13,8 +11,10 @@ import securesocial.core.providers.utils.{ Mailer, PasswordHasher, PasswordValid
 import securesocial.core.services._
 
 import scala.concurrent.ExecutionContext
-
-import play.api.libs.concurrent.{ Execution => PlayExecution }
+import scala.collection.immutable.ListMap
+import play.api.libs.mailer.MailerClient
+import play.api.libs.ws.WSClient
+import play.api.mvc.PlayBodyParsers
 /**
  * A runtime environment where the services needed are available
  */
@@ -22,11 +22,11 @@ trait RuntimeEnvironment {
 
   type U
 
-  implicit val cacheApi: CacheApi
-  implicit val playEnv: Environment
-  implicit val WS: WSClient
-  implicit val mailerClient: MailerClient
-  implicit val actorSystem: ActorSystem
+  def wsClient: WSClient
+  def cacheApi: AsyncCacheApi
+  def environment: Environment
+  def mailerClient: MailerClient
+  def actorSystem: ActorSystem
 
   def routes: RoutesService
 
@@ -45,13 +45,11 @@ trait RuntimeEnvironment {
   def cacheService: CacheService
   def avatarService: Option[AvatarService]
 
+  // TODO: apply upstream changes
+  //def providers: Map[String, IdentityProvider]
+
   def idGenerator: IdGenerator
   def authenticatorService: AuthenticatorService[U]
-  def cookieAuthenticatorConfigurations: CookieAuthenticatorConfigurations
-  def httpHeaderAuthenticatorConfigurations: HttpHeaderAuthenticatorConfigurations
-  // def identityProviderConfigurations: IdentityProviderConfigurations
-  def serviceInfoHelper: ServiceInfoHelper
-  def usernamePasswordProviderConfigurations: UsernamePasswordProviderConfigurations
 
   def eventListeners: Seq[EventListener]
 
@@ -60,8 +58,20 @@ trait RuntimeEnvironment {
   implicit def executionContext: ExecutionContext
 
   def configuration: Configuration
+  lazy val usernamePasswordConfig: UsernamePasswordConfig =
+    UsernamePasswordConfig.fromConfiguration(configuration)
+  lazy val httpHeaderConfig: HttpHeaderConfig =
+    HttpHeaderConfig.fromConfiguration(configuration)
+  lazy val cookieConfig: CookieConfig =
+    CookieConfig.fromConfiguration(configuration)
+  lazy val enableRefererAsOriginalUrl: EnableRefererAsOriginalUrl =
+    EnableRefererAsOriginalUrl(configuration)
+  lazy val registrationEnabled =
+    RegistrationEnabled(configuration)
 
   def messagesApi: MessagesApi
+
+  def parsers: PlayBodyParsers
 
   /**
    * Factory method for IdentityProvider
@@ -110,15 +120,14 @@ trait RuntimeEnvironment {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkProvider(routes, cacheService, oauth2ClientFor(ChatWorkProvider.ChatWork, customOAuth2Settings))
       case UsernamePasswordProvider.UsernamePassword =>
-        new UsernamePasswordProvider[U](userService, avatarService, viewTemplates, passwordHashers)
+        new UsernamePasswordProvider[U](userService, avatarService, viewTemplates, passwordHashers, messagesApi)
       case _ => throw new RuntimeException(s"Invalid provider '$provider'")
     }
   }
 
-  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(serviceInfoHelper.forProvider(provider)(configuration), httpService)
+  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(ServiceInfoHelper.forProvider(configuration, provider), httpService)
   protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None): OAuth2Client = {
-    val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
-    val settings = customSettings.getOrElse(oauth2SettingsBuilder.forProvider(provider)(configuration))
+    val settings = customSettings.getOrElse(OAuth2Settings.forProvider(configuration, provider))
     provider match {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkOAuth2Client(httpService, settings)
@@ -134,29 +143,26 @@ object RuntimeEnvironment {
    * You can start your app with with by only adding a userService to handle users.
    */
   abstract class Default extends RuntimeEnvironment {
-    override lazy val routes: RoutesService = new RoutesService.Default(configuration, playEnv)
+    override lazy val routes: RoutesService = new RoutesService.Default(environment, configuration)
 
     override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)(configuration)
     override lazy val mailTemplates: MailTemplates = new MailTemplates.Default(this)
-    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates)(configuration, messagesApi, mailerClient, actorSystem)
+    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates, mailerClient, configuration, actorSystem)
 
-    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()(configuration)
+    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default(configuration)
     override lazy val passwordHashers: Map[String, PasswordHasher] = Map(currentHasher.id -> currentHasher)
-    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default()(configuration)
+    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default(usernamePasswordConfig.minimumPasswordLength)
 
-    override lazy val httpService: HttpService = new HttpService.Default
-    override lazy val cacheService: CacheService = new CacheService.Default
+    override lazy val httpService: HttpService = new HttpService.Default(wsClient)
+    override lazy val cacheService: CacheService = new CacheService.Default(cacheApi)
     override lazy val avatarService: Option[AvatarService] = Some(new AvatarService.Default(httpService))
-    override lazy val idGenerator: IdGenerator = new IdGenerator.Default()(configuration)
+    override lazy val idGenerator: IdGenerator = new IdGenerator.Default(configuration)
 
-    override lazy val authenticatorService = new AuthenticatorService(
-      new CookieAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, cookieAuthenticatorConfigurations),
-      new HttpHeaderAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, httpHeaderAuthenticatorConfigurations)
-    )
+    override lazy val authenticatorService: AuthenticatorService[U] = new AuthenticatorService(
+      new CookieAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, cookieConfig),
+      new HttpHeaderAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, httpHeaderConfig))
 
     override lazy val eventListeners: Seq[EventListener] = Seq()
-    override implicit def executionContext: ExecutionContext =
-      PlayExecution.defaultContext
 
     override lazy val providerIds = List(
       FacebookProvider.Facebook,
@@ -181,5 +187,15 @@ object RuntimeEnvironment {
       ChatWorkProvider.ChatWork,
       UsernamePasswordProvider.UsernamePassword
     )
+
+    // TODO: apply upstream changes
+    //protected def include(p: IdentityProvider): (String, IdentityProvider) = p.id -> p
+    //protected def oauth1ClientFor(provider: String): OAuth1Client =
+    //  new OAuth1Client.Default(ServiceInfoHelper.forProvider(configuration, provider), httpService)
+    //protected def oauth2ClientFor(provider: String): OAuth2Client =
+    //  new OAuth2Client.Default(httpService, OAuth2Settings.forProvider(configuration, provider))
+    //protected lazy val builtInProviders = ListMap[String, IdentityProvider]()
+    //
+    //override lazy val providers: ListMap[String, IdentityProvider] = builtInProviders
   }
 }

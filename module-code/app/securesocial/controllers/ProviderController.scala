@@ -18,8 +18,8 @@ package securesocial.controllers
 
 import javax.inject.Inject
 
-import play.api.{ Environment, Configuration }
-import play.api.i18n.{ I18nSupport, Messages, MessagesApi }
+import play.api.Configuration
+import play.api.i18n.{ I18nSupport, Messages }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
@@ -32,7 +32,7 @@ import scala.concurrent.Future
 /**
  * A default controller that uses the BasicProfile as the user type
  */
-class ProviderController @Inject() (implicit val env: RuntimeEnvironment)
+class ProviderController @Inject() (override implicit val env: RuntimeEnvironment)
   extends BaseProviderController
 
 /**
@@ -93,7 +93,7 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
   private def builder() = {
 
     //todo: this should be configurable maybe
-    env.authenticatorService.find(env.cookieAuthenticatorConfigurations.Id).getOrElse {
+    env.authenticatorService.find(CookieAuthenticator.Id).getOrElse {
       logger.error(s"[securesocial] missing CookieAuthenticatorBuilder")
       throw new AuthenticationException()
     }
@@ -110,11 +110,10 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
     case UsernamePasswordProvider.UsernamePassword =>
       Some(env.createProvider(provider, None, miscParam))
     case _ =>
-      val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
       val settings = if (scope.isDefined) {
-        oauth2SettingsBuilder.forProvider(provider)(configuration).copy(scope = scope)
+        OAuth2Settings.forProvider(configuration, provider).copy(scope = scope)
       } else {
-        oauth2SettingsBuilder.forProvider(provider)(configuration)
+        OAuth2Settings.forProvider(configuration, provider)
       }
       val defaultAuthUrlParams = settings.authorizationUrlParams
       Some(env.createProvider(provider, Some(settings.copy(authorizationUrlParams = defaultAuthUrlParams ++ authorizationUrlParams)), miscParam))
@@ -222,16 +221,15 @@ object ProviderControllerHelper {
   /**
    * The application context
    */
-  val ApplicationContext = "application.context"
+  val ApplicationContext = "play.http.context"
 
   /**
    * The url where the user needs to be redirected after succesful authentication.
    *
    * @return
    */
-  def landingUrl(configuration: Configuration) = configuration.getString(onLoginGoTo).getOrElse(
-    configuration.getString(ApplicationContext).getOrElse(Root)
-  )
+  def landingUrl(configuration: Configuration) = configuration.get[Option[String]](onLoginGoTo).getOrElse(
+    configuration.get[String](ApplicationContext))
 
   /**
    * Returns the url that the user should be redirected to after login

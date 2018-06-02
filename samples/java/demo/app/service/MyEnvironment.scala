@@ -20,23 +20,27 @@ import javax.inject.{ Inject, Singleton }
 
 import akka.actor.ActorSystem
 import play.api.{ Configuration, Environment }
-import play.api.cache.CacheApi
+import play.api.cache.AsyncCacheApi
 import play.api.i18n.MessagesApi
 import play.api.libs.mailer.MailerClient
 import play.api.libs.ws.WSClient
-import securesocial.core.{ ServiceInfoHelper, RuntimeEnvironment }
-import securesocial.core.authenticator.{ HttpHeaderAuthenticatorConfigurations, CookieAuthenticatorConfigurations }
-import securesocial.core.providers.UsernamePasswordProviderConfigurations
+import play.api.mvc.PlayBodyParsers
+import securesocial.core.RuntimeEnvironment
 import securesocial.core.services.UserService
 
+import scala.concurrent.ExecutionContext
+
 @Singleton
-class MyEnvironment @Inject() (override val configuration: Configuration, implicit val playEnv: Environment, val cacheApi: CacheApi, override val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
+class MyEnvironment @Inject() (
+  override val configuration: Configuration,
+  override val messagesApi: MessagesApi,
+  override val environment: Environment,
+  override val wsClient: WSClient,
+  override val cacheApi: AsyncCacheApi,
+  override val mailerClient: MailerClient,
+  override val executionContext: ExecutionContext,
+  override val parsers: PlayBodyParsers,
+  override val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
   type U = DemoUser
   override val userService: UserService[U] = new InMemoryUserService()
-
-  val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default(configuration, playEnv)
-  val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default(configuration, playEnv)
-  val serviceInfoHelper = new ServiceInfoHelper.Default
-  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default(configuration)
-
 }

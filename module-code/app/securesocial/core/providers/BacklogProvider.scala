@@ -63,7 +63,6 @@ class BacklogProvider(
 )(implicit val executionContext: ExecutionContext, val configuration: Configuration)
     extends OAuth2Provider {
 
-  val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   private val getAuthenticatedUserUrl = "https://{apiHost}/api/v2/users/myself"
   val AccessToken = "token"
 
@@ -87,8 +86,7 @@ class BacklogProvider(
   }
 
   lazy val client = {
-    val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
-    val defaultSettings = oauth2SettingsBuilder.forProvider(id)
+    val defaultSettings = OAuth2Settings.forProvider(configuration, id)
     val authorizationUrl = getUrlForSpace(defaultSettings.authorizationUrl)
     val accessTokenUrl = getUrlForSpace(defaultSettings.accessTokenUrl)
     val settings = defaultSettings.copy(

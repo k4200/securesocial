@@ -21,25 +21,38 @@ import javax.inject.{ Inject, Singleton }
 
 import akka.actor.ActorSystem
 import controllers.CustomRoutesService
+import play.api.cache.AsyncCacheApi
+import play.api.{ Configuration, Environment }
 import play.api.i18n.MessagesApi
 import play.api.libs.mailer.MailerClient
 import play.api.libs.ws.WSClient
-import play.api.mvc.RequestHeader
-import play.api.{ Configuration, Environment }
-import play.api.cache.CacheApi
-import securesocial.core.authenticator.{ HttpHeaderAuthenticatorConfigurations, CookieAuthenticatorConfigurations }
-import securesocial.core.providers.UsernamePasswordProviderConfigurations
-import securesocial.core.{ ServiceInfoHelper, BasicProfile, RuntimeEnvironment }
+import play.api.mvc.PlayBodyParsers
+import securesocial.core.{ IdentityProvider, RuntimeEnvironment }
+
+import scala.collection.immutable.ListMap
+import scala.concurrent.ExecutionContext
 
 @Singleton
-class MyEnvironment @Inject() (override val configuration: Configuration, implicit val playEnv: Environment, val cacheApi: CacheApi, override val messagesApi: MessagesApi, val WS: WSClient, val mailerClient: MailerClient, val actorSystem: ActorSystem) extends RuntimeEnvironment.Default {
+class MyEnvironment @Inject() (
+  override val configuration: Configuration,
+  override val messagesApi: MessagesApi,
+  override val environment: Environment,
+  override val wsClient: WSClient,
+  override val cacheApi: AsyncCacheApi,
+  override val mailerClient: MailerClient,
+  override val executionContext: ExecutionContext,
+  override val parsers: PlayBodyParsers,
+  override val actorSystem: ActorSystem,
+  customProviders: CustomProviders) extends RuntimeEnvironment.Default {
   override type U = DemoUser
-  override implicit val executionContext = play.api.libs.concurrent.Execution.defaultContext
-  override lazy val routes = new CustomRoutesService(configuration, playEnv)
+  override lazy val routes = new CustomRoutesService(environment, configuration)
   override lazy val userService: InMemoryUserService = new InMemoryUserService()
   override lazy val eventListeners = List(new MyEventListener())
-  override val cookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default(configuration, playEnv)
-  override val httpHeaderAuthenticatorConfigurations = new HttpHeaderAuthenticatorConfigurations.Default(configuration, playEnv)
-  val serviceInfoHelper = new ServiceInfoHelper.Default
-  val usernamePasswordProviderConfigurations = new UsernamePasswordProviderConfigurations.Default(configuration)
+  // TODO: apply upstream changes
+  //override lazy val providers: ListMap[String, IdentityProvider] =
+  //  ListMap(customProviders.list.map(include): _*) ++ builtInProviders
+}
+
+case class CustomProviders(list: Seq[IdentityProvider]) {
+  @Inject def this() = this(Seq.empty)
 }

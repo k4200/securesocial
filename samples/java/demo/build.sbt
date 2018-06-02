@@ -4,9 +4,7 @@ version := Common.version
 
 scalaVersion := Common.scalaVersion
 
-scalariformSettings
-
-libraryDependencies ++= Seq("tv.kazu" %% "securesocial" % version.value, javaCore)
+libraryDependencies ++= Seq("tv.kazu" %% "securesocial" % version.value, javaCore, guice)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 

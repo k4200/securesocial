@@ -54,8 +54,7 @@ case class BasicProfile(
   oAuth1Info: Option[OAuth1Info] = None,
   oAuth2Info: Option[OAuth2Info] = None,
   passwordInfo: Option[PasswordInfo] = None,
-  extraInfo: Option[Map[String, String]] = None
-) extends GenericProfile
+  extraInfo: Option[Map[String, String]] = None) extends GenericProfile
 
 /**
  * The OAuth 1 details
