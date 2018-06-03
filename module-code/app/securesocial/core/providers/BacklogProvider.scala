@@ -22,7 +22,7 @@ import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
 import play.api.Configuration
-import play.api.libs.ws.WSResponse
+import play.api.libs.ws.{ WSRequest, WSResponse }
 import play.api.libs.json.{ Reads, Json, JsValue }
 import play.api.mvc._
 import securesocial.core._
@@ -33,7 +33,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import BacklogProvider._
 
 class BacklogOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings
+  httpService: HttpService, settings: OAuth2Settings
 )(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
 
   def retrieveProfile(profileUrl: String, accessToken: String): Future[JsValue] = {
@@ -85,19 +85,11 @@ class BacklogProvider(
     }
   }
 
-  lazy val client = {
-    val defaultSettings = OAuth2Settings.forProvider(configuration, id)
-    val authorizationUrl = getUrlForSpace(defaultSettings.authorizationUrl)
-    val accessTokenUrl = getUrlForSpace(defaultSettings.accessTokenUrl)
-    val settings = defaultSettings.copy(
-      authorizationUrl = authorizationUrl,
-      accessTokenUrl = accessTokenUrl
-    )
-    new BacklogOAuth2Client(httpService, settings)
-  }
+  private implicit lazy val backlogApiSettings: BacklogApiSettings = BacklogApiSettings(apiHost = apiHost)
 
-  private def getUrlForSpace(url: String): String = {
-    url.replace("{apiHost}", apiHost)
+  lazy val client = {
+    val settings = backlogApiSettings.getSettingsForSpace(OAuth2Settings.forProvider(configuration, id))
+    new BacklogOAuth2Client(httpService, settings)
   }
 
   override protected def buildInfo(response: WSResponse): OAuth2Info = {
@@ -214,4 +206,21 @@ object BacklogProvider {
     lang: Option[String],
     mailAddress: String
   )
+
+  def getUrlForSpace(url: String)(implicit settings: BacklogApiSettings): String = {
+    settings.getUrlForSpace(url)
+  }
+}
+
+case class BacklogApiSettings(apiHost: String) {
+  def getSettingsForSpace(settings: OAuth2Settings): OAuth2Settings = {
+    settings.copy(
+      authorizationUrl = getUrlForSpace(settings.authorizationUrl),
+      accessTokenUrl = getUrlForSpace(settings.accessTokenUrl)
+    )
+  }
+
+  def getUrlForSpace(url: String): String = {
+    url.replace("{apiHost}", apiHost)
+  }
 }
