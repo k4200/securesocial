@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,7 +41,7 @@ abstract class PasswordHasher {
   /**
    * Checks whether a supplied password matches the hashed one
    *
-   * @param passwordInfo    the password retrieved from the backing store (by means of UserService)
+   * @param passwordInfo the password retrieved from the backing store (by means of UserService)
    * @param suppliedPassword the password supplied by the user trying to log in
    * @return true if the password matches, false otherwise.
    */
@@ -84,7 +84,7 @@ object PasswordHasher {
     /**
      * Checks if a password matches the hashed version
      *
-     * @param passwordInfo    the password retrieved from the backing store (by means of UserService)
+     * @param passwordInfo the password retrieved from the backing store (by means of UserService)
      * @param suppliedPassword the password supplied by the user trying to log in
      * @return true if the password matches, false otherwise.
      */
@@ -96,5 +96,4 @@ object PasswordHasher {
   object Default {
     val RoundsProperty = "securesocial.passwordHasher.bcrypt.rounds"
   }
-
 }

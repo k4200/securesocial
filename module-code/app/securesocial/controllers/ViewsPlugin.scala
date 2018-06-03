@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -76,7 +76,7 @@ trait MailTemplates {
   /**
    * Returns the email sent when a user starts the sign up process
    *
-   * @param token  the token used to identify the request
+   * @param token the token used to identify the request
    * @param request the current http request
    * @return a String with the text and/or html body for the email
    */
@@ -85,7 +85,7 @@ trait MailTemplates {
   /**
    * Returns the email sent when the user is already registered
    *
-   * @param user   the user
+   * @param user the user
    * @param request the current request
    * @return a tuple with the text and/or html body for the email
    */
@@ -94,7 +94,7 @@ trait MailTemplates {
   /**
    * Returns the welcome email sent when the user finished the sign up process
    *
-   * @param user   the user
+   * @param user the user
    * @param request the current request
    * @return a String with the text and/or html body for the email
    */
@@ -112,8 +112,8 @@ trait MailTemplates {
   /**
    * Returns the email sent to the user to reset the password
    *
-   * @param user   the user
-   * @param token  the token used to identify the request
+   * @param user the user
+   * @param token the token used to identify the request
    * @param request the current http request
    * @return a String with the text and/or html body for the email
    */
@@ -122,7 +122,7 @@ trait MailTemplates {
   /**
    * Returns the email sent as a confirmation of a password change
    *
-   * @param user   the user
+   * @param user the user
    * @param request the current http request
    * @return a String with the text and/or html body for the email
    */
@@ -169,11 +169,9 @@ object ViewTemplates {
       securesocial.views.html.notAuthorized()
     }
   }
-
 }
 
 object MailTemplates {
-
   /**
    * The default mails.
    */

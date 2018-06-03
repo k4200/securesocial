@@ -172,7 +172,6 @@ trait OAuth2Provider extends IdentityProvider with ApiSupport {
 
   /**
    * Defines the request format for api authentication requests
-   *
    * @param email the user email
    * @param info the OAuth2Info as returned by some Oauth2 service on the client side (eg: JS app)
    */

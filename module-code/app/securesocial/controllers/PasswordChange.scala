@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -70,9 +70,8 @@ trait BasePasswordChange extends SecureSocial with I18nSupport {
 
   /**
    * checks if the supplied password matches the stored one
-   *
    * @param suppliedPassword the password entered in the form
-   * @param request         the current request
+   * @param request the current request
    * @tparam A the type of the user object
    * @return a future boolean
    */
@@ -152,6 +151,6 @@ trait BasePasswordChange extends SecureSocial with I18nSupport {
  * The class used in the form
  *
  * @param currentPassword the user's current password
- * @param newPassword    the new password
+ * @param newPassword the new password
  */
 case class ChangeInfo(currentPassword: String, newPassword: String)

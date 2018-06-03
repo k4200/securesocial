@@ -16,9 +16,9 @@
  */
 package securesocial.core.java;
 
+import play.twirl.api.Html;
 import play.mvc.Http;
 import play.mvc.Result;
-import play.twirl.api.Html;
 
 import java.util.concurrent.CompletionStage;
 
@@ -30,8 +30,6 @@ import java.util.concurrent.CompletionStage;
  */
 public interface SecuredActionResponses {
     Html notAuthorizedPage(Http.Context ctx);
-
     CompletionStage<Result> notAuthenticatedResult(Http.Context ctx);
-
     CompletionStage<Result> notAuthorizedResult(Http.Context ctx);
 }

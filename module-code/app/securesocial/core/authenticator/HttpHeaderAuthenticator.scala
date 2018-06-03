@@ -35,6 +35,7 @@ import scala.concurrent.Future
  * @param creationDate the authenticator creation time
  * @param store the authenticator store where instances of this authenticator are persisted
  * @tparam U the user type (defined by the application using the module)
+ *
  * @see AuthenticatorStore
  * @see RuntimeEnvironment
  */

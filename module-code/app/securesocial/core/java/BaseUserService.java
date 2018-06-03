@@ -1,17 +1,18 @@
 /**
  * Copyright 2012-2014 Jorge Aliss (jaliss at gmail dot com) - twitter: @jaliss
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 package securesocial.core.java;
 
@@ -29,8 +30,9 @@ import static scala.compat.java8.FutureConverters.toScala;
 
 /**
  * A base user service for developers that want to write their UserService in Java.
- * <p>
+ *
  * Note: You need to implement all the doXXX methods below.
+ *
  */
 public abstract class BaseUserService<U> implements UserService<U> {
     protected BaseUserService() {
@@ -52,11 +54,11 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Finds an Identity by email and provider id.
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation.
      *
-     * @param email      - the user email
+     * @param email - the user email
      * @param providerId - the provider id
      * @return
      */
@@ -92,7 +94,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * Links the current user Identity to another
      *
      * @param current The Identity of the current user
-     * @param to      The Identity that needs to be linked to the current user
+     * @param to The Identity that needs to be linked to the current user
      */
     @Override
     public Future<U> link(U current, BasicProfile to) {
@@ -126,7 +128,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
     /**
      * Saves a token.  This is needed for users that
      * are creating an account in the system instead of using one in a 3rd party system.
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -140,7 +142,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Finds a token
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -154,7 +156,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Deletes a token
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -172,9 +174,10 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Deletes all expired tokens
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
+     *
      */
     @Override
     public void deleteExpiredTokens() {
@@ -191,7 +194,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Saves a token
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -203,24 +206,23 @@ public abstract class BaseUserService<U> implements UserService<U> {
      * Links the current user Identity to another
      *
      * @param current The Identity of the current user
-     * @param to      The Identity that needs to be linked to the current user
+     * @param to The Identity that needs to be linked to the current user
      */
     public abstract CompletionStage<U> doLink(U current, BasicProfile to);
 
     /**
      * Finds the user in the backing store.
-     *
      * @return an Identity instance or null if no user matches the specified id
      */
     public abstract CompletionStage<BasicProfile> doFind(String providerId, String userId);
 
-    public abstract CompletionStage<PasswordInfo> doPasswordInfoFor(U user);
+    public abstract CompletionStage<PasswordInfo>  doPasswordInfoFor(U user);
 
     public abstract CompletionStage<BasicProfile> doUpdatePasswordInfo(U user, PasswordInfo info);
 
     /**
      * Finds a token
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -232,11 +234,11 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Finds an identity by email and provider id.
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation.
      *
-     * @param email      - the user email
+     * @param email - the user email
      * @param providerId - the provider id
      * @return an Identity instance or null if no user matches the specified id
      */
@@ -244,7 +246,7 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Deletes a token
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
      *
@@ -254,9 +256,10 @@ public abstract class BaseUserService<U> implements UserService<U> {
 
     /**
      * Deletes all expired tokens
-     * <p>
+     *
      * Note: If you do not plan to use the UsernamePassword provider just provide en empty
      * implementation
+     *
      */
     public abstract void doDeleteExpiredTokens();
 }

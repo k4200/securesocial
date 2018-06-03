@@ -1,17 +1,18 @@
 /**
  * Copyright 2012-2014 Jorge Aliss (jaliss at gmail dot com) - twitter: @jaliss
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 package securesocial.core.java;
 
@@ -33,14 +34,15 @@ import static scala.compat.java8.FutureConverters.toJava;
 /**
  * An action that puts the current user in the context if there's one available. This is useful in
  * public actions that need to access the user information if there's one logged in.
- * <p>
+ *
  * Sample usage:
  *
- * @UserAwareAction public static Result index() {
- * User user = (User) ctx().args.get(SecureSocial.USER_KEY);
- * String name = user == null ? "guest" : user.displayName;
- * return ok("Hello " + name);
- * }
+ *  @UserAwareAction
+ *  public static Result index() {
+ *      User user = (User) ctx().args.get(SecureSocial.USER_KEY);
+ *      String name = user == null ? "guest" : user.displayName;
+ *      return ok("Hello " + name);
+ *  }
  * @see securesocial.core.java.UserAwareAction
  */
 public class UserAware extends Action<UserAwareAction> {
