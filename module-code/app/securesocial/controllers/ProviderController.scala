@@ -23,7 +23,7 @@ import play.api.i18n.{ I18nSupport, Messages }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
-import securesocial.core.providers.{ BacklogProvider, LinkedInProvider, TwitterProvider, UsernamePasswordProvider, XingProvider }
+import securesocial.core.providers.{ LinkedInProvider, TwitterProvider, UsernamePasswordProvider, XingProvider }
 import securesocial.core.services.SaveMode
 import securesocial.core.utils._
 
@@ -106,11 +106,11 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
    * @param saveMode One of SaveMode.*
    * @param miscParam
    */
-  private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String]): Option[IdentityProvider] = provider match {
+  private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String])(implicit request: RequestHeader): Option[IdentityProvider] = provider match {
     case _ if env.customProviders.contains(provider) =>
       env.customProviders.get(provider)
-    case BacklogProvider.Backlog | LinkedInProvider.LinkedIn | TwitterProvider.Twitter | XingProvider.Xing | UsernamePasswordProvider.UsernamePassword =>
-      Some(env.createProvider(provider, None, miscParam))
+    case LinkedInProvider.LinkedIn | TwitterProvider.Twitter | XingProvider.Xing | UsernamePasswordProvider.UsernamePassword =>
+      Some(env.createProvider(provider, None, miscParam, Some(request)))
     case _ =>
       val settings = if (scope.isDefined) {
         OAuth2Settings.forProvider(configuration, provider).copy(scope = scope)
@@ -118,7 +118,7 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
         OAuth2Settings.forProvider(configuration, provider)
       }
       val defaultAuthUrlParams = settings.authorizationUrlParams
-      Some(env.createProvider(provider, Some(settings.copy(authorizationUrlParams = defaultAuthUrlParams ++ authorizationUrlParams)), miscParam))
+      Some(env.createProvider(provider, Some(settings.copy(authorizationUrlParams = defaultAuthUrlParams ++ authorizationUrlParams)), miscParam, Some(request)))
   }
 
   private def getSaveMode(saveModeStr: Option[String], existsUser: Boolean): SaveMode = {

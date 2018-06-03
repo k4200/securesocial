@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.collection.immutable.ListMap
 import play.api.libs.mailer.MailerClient
 import play.api.libs.ws.WSClient
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{ PlayBodyParsers, RequestHeader }
 /**
  * A runtime environment where the services needed are available
  */
@@ -77,7 +77,7 @@ trait RuntimeEnvironment {
    * @param customOAuth2Settings Valid only for OAuth2Provider. If None, the default settings are used.
    * @return
    */
-  def createProvider(provider: String, customOAuth2Settings: Option[OAuth2Settings] = None, miscParam: Option[String] = None): IdentityProvider = {
+  def createProvider(provider: String, customOAuth2Settings: Option[OAuth2Settings] = None, miscParam: Option[String] = None, request: Option[RequestHeader] = None): IdentityProvider = {
     provider match {
       case FacebookProvider.Facebook =>
         new FacebookProvider(routes, cacheService, oauth2ClientFor(FacebookProvider.Facebook, customOAuth2Settings))
@@ -108,7 +108,7 @@ trait RuntimeEnvironment {
       case BitbucketProvider.Bitbucket =>
         BitbucketProvider(routes, cacheService, oauth2ClientFor(BitbucketProvider.Bitbucket, customOAuth2Settings))
       case BacklogProvider.Backlog =>
-        new BacklogProvider(routes, cacheService, httpService, miscParam)(executionContext, configuration)
+        new BacklogProvider(routes, cacheService, oauth2ClientFor(BacklogProvider.Backlog, customOAuth2Settings, miscParam, request))
       case LinkedInProvider.LinkedIn =>
         new LinkedInProvider(routes, cacheService, oauth1ClientFor(LinkedInProvider.LinkedIn))
       case TwitterProvider.Twitter =>
@@ -124,11 +124,13 @@ trait RuntimeEnvironment {
   }
 
   protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(ServiceInfoHelper.forProvider(configuration, provider), httpService)
-  protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None): OAuth2Client = {
+  protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None, miscParam: Option[String] = None, request: Option[RequestHeader] = None): OAuth2Client = {
     val settings = customSettings.getOrElse(OAuth2Settings.forProvider(configuration, provider))
     provider match {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkOAuth2Client(httpService, settings)
+      case BacklogProvider.Backlog =>
+        new BacklogOAuth2Client(httpService, settings, BacklogProvider.createBacklogApiSettings(cacheService, miscParam, request))
       case _ => new OAuth2Client.Default(httpService, settings)
     }
   }
