@@ -150,7 +150,7 @@ trait BaseProviderController extends SecureSocial with I18nSupport {
           logger.error(s"[securesocial] authentication failed, reason: ${failed.error}")
           throw new AuthenticationException()
         case flow: AuthenticationResult.NavigationFlow => Future.successful {
-          flow.result.addToSession(paramsForSession.toList.filter(_._2.isDefined).map(t => t._1 -> t._2.get): _*)
+          flow.result.addingToSession(paramsForSession.toList.filter(_._2.isDefined).map(t => t._1 -> t._2.get): _*)
         }
         case authenticated: AuthenticationResult.Authenticated =>
           if (authenticationFlow) {
