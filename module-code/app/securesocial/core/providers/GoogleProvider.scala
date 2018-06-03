@@ -29,7 +29,7 @@ class GoogleProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth2Client)
-  extends OAuth2Provider.Base(routesService, client, cacheService) {
+  extends OAuth2Provider(routesService, client, cacheService) {
   val UserInfoApi = "https://www.googleapis.com/plus/v1/people/me?fields=id,name,displayName,image,emails&access_token="
   val Error = "error"
   val Message = "message"

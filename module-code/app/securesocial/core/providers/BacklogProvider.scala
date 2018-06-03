@@ -68,7 +68,7 @@ class BacklogProvider(
   cacheService: CacheService,
   client: OAuth2Client
 )
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+    extends OAuth2Provider(routesService, client, cacheService) {
 
   private val getAuthenticatedUserUrl = "https://{apiHost}/api/v2/users/myself"
   val AccessToken = "token"

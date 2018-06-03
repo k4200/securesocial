@@ -47,7 +47,7 @@ class ChatWorkProvider(
   cacheService: CacheService,
   client: OAuth2Client
 )
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+    extends OAuth2Provider(routesService, client, cacheService) {
   override val id = ChatWorkProvider.ChatWork
 
   override def fillProfile(info: OAuth2Info): Future[BasicProfile] = {

@@ -30,7 +30,7 @@ class GitHubProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth2Client)
-  extends OAuth2Provider.Base(routesService, client, cacheService) {
+  extends OAuth2Provider(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.github.com/user?access_token=%s"
   val AccessToken = "access_token"
   val TokenType = "token_type"

@@ -29,7 +29,7 @@ class InstagramProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth2Client)
-  extends OAuth2Provider.Base(routesService, client, cacheService) {
+  extends OAuth2Provider(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.instagram.com/v1/users/self?access_token=%s"
   val AccessToken = "access_token"
   val TokenType = "token_type"

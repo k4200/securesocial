@@ -51,7 +51,7 @@ class BitbucketProvider(
   cacheService: CacheService,
   client: OAuth2Client
 )
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+    extends OAuth2Provider(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.bitbucket.org/2.0/user?access_token=%s"
 
   implicit val errorResponseReads: Reads[ErrorResponse] = Json.reads[ErrorResponse]

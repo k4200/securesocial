@@ -85,14 +85,16 @@ object OAuth2Client {
 /**
  * Base class for all OAuth2 providers
  */
-trait OAuth2Provider extends IdentityProvider with ApiSupport {
-  protected val routesService: RoutesService
-  protected val client: OAuth2Client
-  protected val cacheService: CacheService
+abstract class OAuth2Provider(
+  routesService: RoutesService,
+  client: OAuth2Client,
+  cacheService: CacheService)
+  extends IdentityProvider with ApiSupport {
 
-  protected implicit val executionContext: ExecutionContext
+  protected implicit val executionContext: ExecutionContext = client.executionContext
   protected val logger = play.api.Logger(this.getClass.getName)
 
+  val settings = client.settings
   def authMethod = AuthenticationMethod.OAuth2
 
   protected def getAccessToken[A](code: String)(implicit request: Request[A]): Future[OAuth2Info] = {
@@ -219,19 +221,6 @@ trait OAuth2Provider extends IdentityProvider with ApiSupport {
     } getOrElse {
       Future.successful(AuthenticationResult.Failed(malformedJson))
     }
-  }
-}
-
-object OAuth2Provider {
-  /**
-   * Base class for all OAuth2 providers
-   */
-  abstract class Base(
-      val routesService: RoutesService,
-      val client: OAuth2Client,
-      val cacheService: CacheService
-  ) extends OAuth2Provider {
-    protected implicit val executionContext: ExecutionContext = client.executionContext
   }
 }
 

@@ -44,7 +44,7 @@ class ConcurProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth2Client)
-  extends OAuth2Provider.Base(routesService, client, cacheService) {
+  extends OAuth2Provider(routesService, client, cacheService) {
   /** formatter used to parse the expiration date returned from Concur */
   private val ExpirationDateFormatter = DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss a")
 
@@ -55,7 +55,6 @@ class ConcurProvider(
    * used to get the access token. Instead, a HTTP GET is used in their implementation.
    */
   override def getAccessToken[A](code: String)(implicit request: Request[A]): Future[OAuth2Info] = {
-    val settings = client.settings
     val url = settings.accessTokenUrl + "?" + OAuth2Constants.Code + "=" + code + "&" +
       OAuth2Constants.ClientId + "=" + settings.clientId + "&" +
       OAuth2Constants.ClientSecret + "=" + settings.clientSecret
