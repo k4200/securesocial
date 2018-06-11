@@ -33,9 +33,8 @@ import scala.concurrent.{ Await, ExecutionContext, Future }
 import BacklogProvider._
 
 class BacklogOAuth2Client(
-  baaseHttpService: HttpService, settings: OAuth2Settings, backlogApiSettings: BacklogApiSettings
-)(implicit executionContext: ExecutionContext)
-    extends OAuth2Client.Default(new BacklogHttpService(baaseHttpService, backlogApiSettings), backlogApiSettings.getOAuth2Settings(settings)) {
+  baaseHttpService: HttpService, settings: OAuth2Settings, backlogApiSettings: BacklogApiSettings)(implicit executionContext: ExecutionContext)
+  extends OAuth2Client.Default(new BacklogHttpService(baaseHttpService, backlogApiSettings), backlogApiSettings.getOAuth2Settings(settings)) {
 
   def retrieveProfile(profileUrl: String, accessToken: String): Future[JsValue] = {
     httpService.url(profileUrl)
@@ -66,9 +65,8 @@ class BacklogHttpService(httpService: HttpService, backlogApiSettings: BacklogAp
 class BacklogProvider(
   routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client
-)
-    extends OAuth2Provider(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
 
   private val getAuthenticatedUserUrl = "https://{apiHost}/api/v2/users/myself"
   val AccessToken = "token"
@@ -107,8 +105,7 @@ class BacklogProvider(
       }.getOrElse {
         val userInfo = me.as[AuthTestResponse]
         val extraInfo = Map(
-          "space_host_name" -> backlogClient.apiHost
-        )
+          "space_host_name" -> backlogClient.apiHost)
         BasicProfile(id, userInfo.id.toString, None, None, Some(userInfo.userId), Some(userInfo.mailAddress), None, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {
@@ -183,11 +180,9 @@ object BacklogProvider {
   case class Error(
     message: String,
     code: Int,
-    moreInfo: String
-  )
+    moreInfo: String)
   case class ErrorResponse(
-      errors: List[Error]
-  ) {
+    errors: List[Error]) {
     def messages = {
       errors.map(_.message).mkString(",")
     }
@@ -197,8 +192,7 @@ object BacklogProvider {
     userId: String,
     roleType: Int,
     lang: Option[String],
-    mailAddress: String
-  )
+    mailAddress: String)
 
   /**
    * Create a BacklogApiSettings.
@@ -254,8 +248,7 @@ case class BacklogApiSettings(optApiHost: Option[String]) {
     optApiHost.map { apiHost =>
       settings.copy(
         authorizationUrl = getUrlForSpace(settings.authorizationUrl, apiHost),
-        accessTokenUrl = getUrlForSpace(settings.accessTokenUrl, apiHost)
-      )
+        accessTokenUrl = getUrlForSpace(settings.accessTokenUrl, apiHost))
     }.getOrElse(settings)
   }
 

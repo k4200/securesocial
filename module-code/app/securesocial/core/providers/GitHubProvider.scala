@@ -72,8 +72,7 @@ class GitHubProvider(
           val avatarUrl = (me \ AvatarUrl).asOpt[String]
           val email = (me \ Email).asOpt[String].filter(!_.isEmpty)
           val extraInfo = Map(
-            "login" -> login
-          )
+            "login" -> login)
           BasicProfile(id, userId.toString, None, None, displayName, email, avatarUrl, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {

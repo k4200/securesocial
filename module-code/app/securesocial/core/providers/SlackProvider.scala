@@ -62,8 +62,7 @@ class SlackProvider(
           val userInfo = me.as[AuthTestResponse]
           val extraInfo = Map(
             "team_name" -> userInfo.team,
-            "team_id" -> userInfo.team_id
-          )
+            "team_id" -> userInfo.team_id)
           BasicProfile(id, userInfo.user_id, None, None, Some(userInfo.user), None, None, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {

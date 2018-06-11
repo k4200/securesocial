@@ -189,7 +189,6 @@ object RuntimeEnvironment {
       TwitterProvider.Twitter,
       XingProvider.Xing,
       ChatWorkProvider.ChatWork,
-      UsernamePasswordProvider.UsernamePassword
-    )
+      UsernamePasswordProvider.UsernamePassword)
   }
 }
