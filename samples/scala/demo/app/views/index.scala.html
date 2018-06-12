@@ -13,11 +13,14 @@
     <ul>
         <li>User Id: @user.userId</li>
         <li>Fist name: @user.firstName.getOrElse("")</li>
-        <li>Last name: @user.lastName.</li>
+        <li>Last name: @user.lastName</li>
         <li>Full name: @user.fullName.getOrElse("")</li>
         <li>Logged in from: @user.providerId</li>
         <li>Email: @user.email.map { email => @email }.getOrElse("Not Available")</li>
         <li>Authentication method: @user.authMethod</li>
+        @user.extraInfo.map { ei =>
+          @ei.map { case (k, v) => <li>Extra info (@k): @v</li>}
+        }
     </ul>
 
     @user.oAuth1Info.map { info =>
@@ -37,6 +40,7 @@
             @info.tokenType.map { t => <li>Token Type: @t</li> }
             @info.expiresIn.map { exp => <li>Expires in: @exp seconds</li>}
             @info.refreshToken.map { rt => <li>Refresh Token: @rt</li>}
+            @info.scope.map { scope => <li>Scope: @scope</li>}
         </ul>
     }
     <hr>
