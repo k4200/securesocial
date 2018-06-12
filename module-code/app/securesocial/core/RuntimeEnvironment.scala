@@ -1,11 +1,9 @@
 package securesocial.core
 
 import akka.actor.ActorSystem
-import play.api.i18n.{ MessagesApi, Messages }
-import play.api.libs.mailer.MailerClient
-import play.api.libs.ws.WSClient
 import play.api.{ Configuration, Environment }
-import play.api.cache.CacheApi
+import play.api.cache.AsyncCacheApi
+import play.api.i18n.MessagesApi
 import securesocial.controllers.{ MailTemplates, ViewTemplates }
 import securesocial.core.authenticator._
 import securesocial.core.providers._
@@ -13,8 +11,10 @@ import securesocial.core.providers.utils.{ Mailer, PasswordHasher, PasswordValid
 import securesocial.core.services._
 
 import scala.concurrent.ExecutionContext
-
-import play.api.libs.concurrent.{ Execution => PlayExecution }
+import scala.collection.immutable.ListMap
+import play.api.libs.mailer.MailerClient
+import play.api.libs.ws.WSClient
+import play.api.mvc.{ PlayBodyParsers, RequestHeader }
 /**
  * A runtime environment where the services needed are available
  */
@@ -22,13 +22,11 @@ trait RuntimeEnvironment {
 
   type U
 
-  implicit val configuration: Configuration
-  implicit val cacheApi: CacheApi
-  implicit val playEnv: Environment
-  implicit val messagesApi: MessagesApi
-  implicit val WS: WSClient
-  implicit val mailerClient: MailerClient
-  implicit val actorSystem: ActorSystem
+  def wsClient: WSClient
+  def cacheApi: AsyncCacheApi
+  def environment: Environment
+  def mailerClient: MailerClient
+  def actorSystem: ActorSystem
 
   def routes: RoutesService
 
@@ -36,8 +34,6 @@ trait RuntimeEnvironment {
   def mailTemplates: MailTemplates
 
   def mailer: Mailer
-
-  val providerIds: List[String]
 
   def currentHasher: PasswordHasher
   def passwordHashers: Map[String, PasswordHasher]
@@ -47,13 +43,11 @@ trait RuntimeEnvironment {
   def cacheService: CacheService
   def avatarService: Option[AvatarService]
 
+  def customProviders: Map[String, IdentityProvider]
+  def providerIds: List[String]
+
   def idGenerator: IdGenerator
   def authenticatorService: AuthenticatorService[U]
-  def cookieAuthenticatorConfigurations: CookieAuthenticatorConfigurations
-  def httpHeaderAuthenticatorConfigurations: HttpHeaderAuthenticatorConfigurations
-  // def identityProviderConfigurations: IdentityProviderConfigurations
-  def serviceInfoHelper: ServiceInfoHelper
-  def usernamePasswordProviderConfigurations: UsernamePasswordProviderConfigurations
 
   def eventListeners: Seq[EventListener]
 
@@ -61,13 +55,29 @@ trait RuntimeEnvironment {
 
   implicit def executionContext: ExecutionContext
 
+  def configuration: Configuration
+  lazy val usernamePasswordConfig: UsernamePasswordConfig =
+    UsernamePasswordConfig.fromConfiguration(configuration)
+  lazy val httpHeaderConfig: HttpHeaderConfig =
+    HttpHeaderConfig.fromConfiguration(configuration)
+  lazy val cookieConfig: CookieConfig =
+    CookieConfig.fromConfiguration(configuration)
+  lazy val enableRefererAsOriginalUrl: EnableRefererAsOriginalUrl =
+    EnableRefererAsOriginalUrl(configuration)
+  lazy val registrationEnabled =
+    RegistrationEnabled(configuration)
+
+  def messagesApi: MessagesApi
+
+  def parsers: PlayBodyParsers
+
   /**
    * Factory method for IdentityProvider
    * @param provider provider name e.g. "github"
    * @param customOAuth2Settings Valid only for OAuth2Provider. If None, the default settings are used.
    * @return
    */
-  def createProvider(provider: String, customOAuth2Settings: Option[OAuth2Settings] = None, miscParam: Option[String] = None): IdentityProvider = {
+  def createProvider(provider: String, customOAuth2Settings: Option[OAuth2Settings] = None, miscParam: Option[String] = None, request: Option[RequestHeader] = None): IdentityProvider = {
     provider match {
       case FacebookProvider.Facebook =>
         new FacebookProvider(routes, cacheService, oauth2ClientFor(FacebookProvider.Facebook, customOAuth2Settings))
@@ -83,6 +93,8 @@ trait RuntimeEnvironment {
         new ConcurProvider(routes, cacheService, oauth2ClientFor(ConcurProvider.Concur, customOAuth2Settings))
       case SoundcloudProvider.Soundcloud =>
         new SoundcloudProvider(routes, cacheService, oauth2ClientFor(SoundcloudProvider.Soundcloud, customOAuth2Settings))
+      case LinkedInOAuth2Provider.LinkedIn =>
+        new LinkedInOAuth2Provider(routes, cacheService, oauth2ClientFor(LinkedInOAuth2Provider.LinkedIn, customOAuth2Settings))
       case VkProvider.Vk =>
         new VkProvider(routes, cacheService, oauth2ClientFor(VkProvider.Vk, customOAuth2Settings))
       case DropboxProvider.Dropbox =>
@@ -96,7 +108,7 @@ trait RuntimeEnvironment {
       case BitbucketProvider.Bitbucket =>
         BitbucketProvider(routes, cacheService, oauth2ClientFor(BitbucketProvider.Bitbucket, customOAuth2Settings))
       case BacklogProvider.Backlog =>
-        new BacklogProvider(routes, cacheService, httpService, miscParam)
+        new BacklogProvider(routes, cacheService, oauth2ClientFor(BacklogProvider.Backlog, customOAuth2Settings, miscParam, request))
       case LinkedInProvider.LinkedIn =>
         new LinkedInProvider(routes, cacheService, oauth1ClientFor(LinkedInProvider.LinkedIn))
       case TwitterProvider.Twitter =>
@@ -106,18 +118,19 @@ trait RuntimeEnvironment {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkProvider(routes, cacheService, oauth2ClientFor(ChatWorkProvider.ChatWork, customOAuth2Settings))
       case UsernamePasswordProvider.UsernamePassword =>
-        new UsernamePasswordProvider[U](userService, avatarService, viewTemplates, passwordHashers)
+        new UsernamePasswordProvider[U](userService, avatarService, viewTemplates, passwordHashers, messagesApi)
       case _ => throw new RuntimeException(s"Invalid provider '$provider'")
     }
   }
 
-  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(serviceInfoHelper.forProvider(provider), httpService)
-  protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None): OAuth2Client = {
-    val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
-    val settings = customSettings.getOrElse(oauth2SettingsBuilder.forProvider(provider))
+  protected def oauth1ClientFor(provider: String) = new OAuth1Client.Default(ServiceInfoHelper.forProvider(configuration, provider), httpService)
+  protected def oauth2ClientFor(provider: String, customSettings: Option[OAuth2Settings] = None, miscParam: Option[String] = None, request: Option[RequestHeader] = None): OAuth2Client = {
+    val settings = customSettings.getOrElse(OAuth2Settings.forProvider(configuration, provider))
     provider match {
       case ChatWorkProvider.ChatWork =>
         new ChatWorkOAuth2Client(httpService, settings)
+      case BacklogProvider.Backlog =>
+        new BacklogOAuth2Client(httpService, settings, BacklogProvider.createBacklogApiSettings(cacheService, miscParam, request))
       case _ => new OAuth2Client.Default(httpService, settings)
     }
   }
@@ -130,29 +143,30 @@ object RuntimeEnvironment {
    * You can start your app with with by only adding a userService to handle users.
    */
   abstract class Default extends RuntimeEnvironment {
-    override lazy val routes: RoutesService = new RoutesService.Default()
+    override lazy val routes: RoutesService = new RoutesService.Default(environment, configuration)
 
-    override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)
+    override lazy val viewTemplates: ViewTemplates = new ViewTemplates.Default(this)(configuration)
     override lazy val mailTemplates: MailTemplates = new MailTemplates.Default(this)
-    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates)
+    override lazy val mailer: Mailer = new Mailer.Default(mailTemplates, mailerClient, configuration, actorSystem)
 
-    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default()
+    override lazy val currentHasher: PasswordHasher = new PasswordHasher.Default(configuration)
     override lazy val passwordHashers: Map[String, PasswordHasher] = Map(currentHasher.id -> currentHasher)
-    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default()
+    override lazy val passwordValidator: PasswordValidator = new PasswordValidator.Default(usernamePasswordConfig.minimumPasswordLength)
 
-    override lazy val httpService: HttpService = new HttpService.Default
-    override lazy val cacheService: CacheService = new CacheService.Default
+    override lazy val httpService: HttpService = new HttpService.Default(wsClient)
+    override lazy val cacheService: CacheService = new CacheService.Default(cacheApi)
     override lazy val avatarService: Option[AvatarService] = Some(new AvatarService.Default(httpService))
-    override lazy val idGenerator: IdGenerator = new IdGenerator.Default()
+    override lazy val idGenerator: IdGenerator = new IdGenerator.Default(configuration)
 
-    override lazy val authenticatorService = new AuthenticatorService(
-      new CookieAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, cookieAuthenticatorConfigurations),
-      new HttpHeaderAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, httpHeaderAuthenticatorConfigurations)
-    )
+    override lazy val authenticatorService: AuthenticatorService[U] = new AuthenticatorService(
+      new CookieAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, cookieConfig),
+      new HttpHeaderAuthenticatorBuilder[U](new AuthenticatorStore.Default(cacheService), idGenerator, httpHeaderConfig))
 
     override lazy val eventListeners: Seq[EventListener] = Seq()
-    override implicit def executionContext: ExecutionContext =
-      PlayExecution.defaultContext
+
+    protected def include(p: IdentityProvider): (String, IdentityProvider) = p.id -> p
+
+    override lazy val customProviders: ListMap[String, IdentityProvider] = ListMap()
 
     override lazy val providerIds = List(
       FacebookProvider.Facebook,
@@ -162,6 +176,7 @@ object RuntimeEnvironment {
       InstagramProvider.Instagram,
       ConcurProvider.Concur,
       SoundcloudProvider.Soundcloud,
+      LinkedInOAuth2Provider.LinkedIn,
       VkProvider.Vk,
       DropboxProvider.Dropbox,
       WeiboProvider.Weibo,
@@ -170,11 +185,10 @@ object RuntimeEnvironment {
       SlackProvider.Slack,
       BitbucketProvider.Bitbucket,
       BacklogProvider.Backlog,
-      LinkedInProvider.LinkedIn,
+      //LinkedInProvider.LinkedIn,
       TwitterProvider.Twitter,
       XingProvider.Xing,
       ChatWorkProvider.ChatWork,
-      UsernamePasswordProvider.UsernamePassword
-    )
+      UsernamePasswordProvider.UsernamePassword)
   }
 }

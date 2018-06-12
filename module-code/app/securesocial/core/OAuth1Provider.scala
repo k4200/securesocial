@@ -17,18 +17,18 @@
 package securesocial.core
 
 import _root_.java.util.UUID
-import play.api.{ Environment, Configuration }
-import play.api.libs.oauth._
-import play.api.mvc.{ AnyContent, Request }
-import play.api.mvc.Results.Redirect
-import oauth.signpost.exception.OAuthException
-import scala.concurrent.{ ExecutionContext, Future }
-import securesocial.core.services.{ HttpService, RoutesService, CacheService }
-import play.api.libs.oauth.OAuth
-import play.api.libs.oauth.ServiceInfo
-import play.api.libs.oauth.RequestToken
-import play.api.libs.oauth.ConsumerKey
+
+import com.typesafe.config.ConfigObject
+import io.methvin.play.autoconfig.AutoConfig
 import play.api.libs.json.JsValue
+import play.api.libs.oauth.{ ConsumerKey, OAuth, RequestToken, ServiceInfo, _ }
+import play.api.mvc.Results.Redirect
+import play.api.mvc.{ AnyContent, Request }
+import play.api.{ ConfigLoader, Configuration }
+import play.shaded.oauth.oauth.signpost.exception.OAuthException
+import securesocial.core.services.{ CacheService, HttpService, RoutesService }
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
  * A trait that allows mocking the OAuth 1 client
@@ -75,6 +75,34 @@ object OAuth1Client {
   }
 }
 
+case class OAuth1Settings(
+  requestTokenUrl: String,
+  accessTokenUrl: String,
+  authorizationUrl: String,
+  consumerKey: String,
+  consumerSecret: String)
+object OAuth1Settings {
+  implicit val configLoader: ConfigLoader[OAuth1Settings] = AutoConfig.loader
+  def forProvider(configuration: Configuration, id: String): OAuth1Settings = {
+    val path = s"securesocial.$id"
+    val defaultPath = "securesocial.oauth1Settings"
+    (Configuration(path -> configuration.get[ConfigObject](defaultPath)) ++ configuration).get[OAuth1Settings](path)
+  }
+}
+
+object ServiceInfoHelper {
+  /**
+   * A helper method to create a service info from the properties file
+   * @param id
+   * @return
+   */
+  def forProvider(configuration: Configuration, id: String): ServiceInfo = {
+    val config = configuration.get[OAuth1Settings](s"securesocial.$id")
+    import config._
+    ServiceInfo(requestTokenUrl, accessTokenUrl, authorizationUrl, ConsumerKey(consumerKey, consumerSecret))
+  }
+}
+
 /**
  * Base class for all OAuth1 providers
  */
@@ -82,12 +110,9 @@ abstract class OAuth1Provider(
   routesService: RoutesService,
   cacheService: CacheService,
   val client: OAuth1Client)
-    extends IdentityProvider {
+  extends IdentityProvider {
 
   protected implicit val executionContext = client.executionContext
-  protected implicit val playEnv: Environment
-  implicit private val implicitConf = configuration
-  protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   protected val logger = play.api.Logger(this.getClass.getName)
 
   def authMethod = AuthenticationMethod.OAuth1
@@ -130,8 +155,7 @@ abstract class OAuth1Provider(
               throw new AuthenticationException()
           };
           accessToken <- client.retrieveOAuth1Info(
-            RequestToken(requestToken.get.token, requestToken.get.secret), verifier.get
-          ).recover {
+            RequestToken(requestToken.get.token, requestToken.get.secret), verifier.get).recover {
               case e =>
                 logger.error("[securesocial] error retrieving access token", e)
                 throw new AuthenticationException()
@@ -154,31 +178,4 @@ object OAuth1Provider {
   val AuthorizationUrl = "authorizationUrl"
   val ConsumerKey = "consumerKey"
   val ConsumerSecret = "consumerSecret"
-}
-
-trait ServiceInfoHelper {
-  def forProvider(id: String): ServiceInfo
-}
-
-object ServiceInfoHelper {
-  class Default(implicit val configuration: Configuration, implicit val environment: Environment) extends ServiceInfoHelper {
-    implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
-
-    def forProvider(id: String): ServiceInfo = {
-      val result = for {
-        requestTokenUrl <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.RequestTokenUrl);
-        accessTokenUrl <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.AccessTokenUrl);
-        authorizationUrl <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.AuthorizationUrl);
-        consumerKey <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.ConsumerKey);
-        consumerSecret <- identityProviderConfigurations.loadProperty(id, OAuth1Provider.ConsumerSecret)
-      } yield {
-        ServiceInfo(requestTokenUrl, accessTokenUrl, authorizationUrl, ConsumerKey(consumerKey, consumerSecret))
-      }
-
-      if (result.isEmpty) {
-        identityProviderConfigurations.throwMissingPropertiesException(id)
-      }
-      result.get
-    }
-  }
 }

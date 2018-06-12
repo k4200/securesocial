@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,12 +18,11 @@ package securesocial.controllers
 
 import javax.inject.Inject
 
-import play.api.{ Configuration, Environment }
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
-import play.api.mvc.Action
-import play.filters.csrf.{ CSRFCheck, _ }
+import play.api.i18n.{ Messages, MessagesApi }
+import play.api.mvc._
+import play.filters.csrf._
 import securesocial.core._
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.providers.utils.PasswordValidator
@@ -36,44 +35,46 @@ import scala.concurrent.Future
  *
  * @param env an environment
  */
-class PasswordReset @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment, val CSRFAddToken: CSRFAddToken, val CSRFCheck: CSRFCheck) extends BasePasswordReset
+class PasswordReset @Inject() (
+  override implicit val env: RuntimeEnvironment,
+  val csrfAddToken: CSRFAddToken,
+  val csrfCheck: CSRFCheck,
+  val controllerComponents: ControllerComponents) extends BasePasswordReset
 
 /**
  * The trait that provides the Password Reset functionality
  *
  */
-trait BasePasswordReset extends MailTokenBasedOperations {
+trait BasePasswordReset extends MailTokenBasedOperations with BaseController {
   private val logger = play.api.Logger("securesocial.controllers.BasePasswordReset")
 
   val PasswordUpdated = "securesocial.password.passwordUpdated"
   val ErrorUpdatingPassword = "securesocial.password.error"
 
-  val changePasswordForm = Form(
+  def changePasswordForm(implicit request: RequestHeader) = Form(
     BaseRegistration.Password ->
       tuple(
         BaseRegistration.Password1 -> nonEmptyText.verifying(PasswordValidator.constraint),
-        BaseRegistration.Password2 -> nonEmptyText
-      ).verifying(Messages(BaseRegistration.PasswordsDoNotMatch), passwords => passwords._1 == passwords._2)
-  )
+        BaseRegistration.Password2 -> nonEmptyText).verifying(Messages(BaseRegistration.PasswordsDoNotMatch), passwords => passwords._1 == passwords._2))
 
-  implicit val CSRFAddToken: CSRFAddToken
+  def csrfAddToken: CSRFAddToken
+  def csrfCheck: CSRFCheck
+  override def messagesApi: MessagesApi = super.messagesApi
 
   /**
    * Renders the page that starts the password reset flow
    */
-  def startResetPassword = CSRFAddToken {
+  def startResetPassword = csrfAddToken {
     Action {
       implicit request =>
         Ok(env.viewTemplates.getStartResetPasswordPage(startForm))
     }
   }
 
-  implicit val CSRFCheck: CSRFCheck
-
   /**
    * Handles form submission for the start page
    */
-  def handleStartResetPassword = CSRFCheck {
+  def handleStartResetPassword = csrfCheck {
     Action.async {
       implicit request =>
         startForm.bindFromRequest.fold(
@@ -93,8 +94,7 @@ trait BasePasswordReset extends MailTokenBasedOperations {
                 }
                 handleStartResult().flashing(Success -> Messages(BaseRegistration.ThankYouCheckEmail))
             }
-          }
-        )
+          })
     }
   }
 
@@ -103,7 +103,7 @@ trait BasePasswordReset extends MailTokenBasedOperations {
    *
    * @param token the token that identifies the user request
    */
-  def resetPassword(token: String) = CSRFAddToken {
+  def resetPassword(token: String) = csrfAddToken {
     Action.async {
       implicit request =>
         executeForToken(token, false, {
@@ -118,13 +118,13 @@ trait BasePasswordReset extends MailTokenBasedOperations {
    *
    * @param token the token that identifies the user request
    */
-  def handleResetPassword(token: String) = CSRFCheck {
+  def handleResetPassword(token: String) = csrfCheck {
     Action.async { implicit request =>
-      import scala.concurrent.ExecutionContext.Implicits.global
       executeForToken(token, false, {
         t =>
-          changePasswordForm.bindFromRequest.fold(errors =>
-            Future.successful(BadRequest(env.viewTemplates.getResetPasswordPage(errors, token))),
+          changePasswordForm.bindFromRequest.fold(
+            errors =>
+              Future.successful(BadRequest(env.viewTemplates.getResetPasswordPage(errors, token))),
             p =>
               env.userService.findByEmailAndProvider(t.email, UsernamePasswordProvider.UsernamePassword).flatMap {
                 case Some(profile) =>
@@ -140,8 +140,7 @@ trait BasePasswordReset extends MailTokenBasedOperations {
                 case _ =>
                   logger.error("[securesocial] could not find user with email %s during password reset".format(t.email))
                   Future.successful(confirmationResult().flashing(Error -> Messages(ErrorUpdatingPassword)))
-              }
-          )
+              })
       })
     }
   }

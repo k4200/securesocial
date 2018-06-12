@@ -16,7 +16,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Configuration, Environment }
 import play.api.libs.ws.WSAuthScheme
 import securesocial.core._
 import securesocial.core.services.{ CacheService, HttpService, RoutesService }
@@ -25,13 +24,12 @@ import scala.concurrent.{ ExecutionContext, Future }
 import ChatWorkProvider._
 
 class ChatWorkOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+  httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
   override def exchangeCodeForToken(code: String, callBackUrl: String, builder: OAuth2InfoBuilder): Future[OAuth2Info] = {
     val params = Map(
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
       OAuth2Constants.Code -> Seq(code),
-      OAuth2Constants.RedirectUri -> Seq(callBackUrl)
-    ) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
+      OAuth2Constants.RedirectUri -> Seq(callBackUrl)) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
     httpService.url(settings.accessTokenUrl)
       .withAuth(settings.clientId, settings.clientSecret, WSAuthScheme.BASIC)
       .post(params).map(builder)
@@ -42,10 +40,11 @@ class ChatWorkOAuth2Client(
  * A ChatWork provider
  *
  */
-class ChatWorkProvider(routesService: RoutesService,
+class ChatWorkProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   override val id = ChatWorkProvider.ChatWork
 
   override def fillProfile(info: OAuth2Info): Future[BasicProfile] = {
@@ -59,8 +58,7 @@ class ChatWorkProvider(routesService: RoutesService,
           val fullName = (data \ Name).asOpt[String]
           val email = (data \ Email).asOpt[String]
           val extraInfo = Map(
-            ChatWorkId -> chatworkId.getOrElse("")
-          )
+            ChatWorkId -> chatworkId.getOrElse(""))
           BasicProfile(id, accountId, None, None, fullName, email, None, authMethod, None, Some(info), extraInfo = Some(extraInfo))
         case _ =>
           logger.error("[securesocial] ChatWork account info request returned error: " + response.body)

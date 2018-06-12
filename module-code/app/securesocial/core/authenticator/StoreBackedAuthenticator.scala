@@ -17,10 +17,10 @@
 package securesocial.core.authenticator
 
 import org.joda.time.DateTime
-import play.api.Configuration
-import scala.annotation.meta.getter
-import scala.concurrent.{ ExecutionContext, Future }
 import play.api.mvc.Result
+
+import scala.annotation.meta.getter
+import scala.concurrent.Future
 
 /**
  * Base trait for the Cookie and Http Header based authenticators
@@ -47,8 +47,6 @@ trait StoreBackedAuthenticator[U, T <: Authenticator[U]] extends Authenticator[U
    * The inactivity period after which an authenticator is considered invalid
    */
   val idleTimeoutInMinutes: Int
-
-  val storeBackedAuthenticatorConfigurations: StoreBackedAuthenticatorConfigurations
 
   /**
    * Returns a copy of this authenticator with the given last used time
@@ -103,7 +101,7 @@ trait StoreBackedAuthenticator[U, T <: Authenticator[U]] extends Authenticator[U
    *
    * @return true if the authenticator timed out, false otherwise.
    */
-  def timedOut: Boolean = lastUsed.plusMinutes(storeBackedAuthenticatorConfigurations.idleTimeout).isBeforeNow
+  def timedOut: Boolean = lastUsed.plusMinutes(idleTimeoutInMinutes).isBeforeNow
 
   /**
    * Checks if the authenticator is valid.  For this implementation it means that the
@@ -154,17 +152,5 @@ trait StoreBackedAuthenticator[U, T <: Authenticator[U]] extends Authenticator[U
    */
   override def discarding(javaContext: play.mvc.Http.Context): Future[Unit] = {
     store.delete(id).map { _ => () }
-  }
-}
-
-trait StoreBackedAuthenticatorConfigurations {
-  val IdleTimeoutKey = "securesocial.cookie.idleTimeoutInMinutes"
-  val idleTimeout: Int
-  val DefaultIdleTimeout = 30
-}
-
-object StoreBackedAuthenticatorConfigurations {
-  class Default(configuration: Configuration) extends StoreBackedAuthenticatorConfigurations {
-    lazy val idleTimeout = configuration.getInt(IdleTimeoutKey).getOrElse(DefaultIdleTimeout)
   }
 }

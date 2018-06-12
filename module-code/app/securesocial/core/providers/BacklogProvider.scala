@@ -21,24 +21,38 @@ package securesocial.core.providers
 import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
-import play.api.{ Configuration, Environment }
-import play.api.libs.ws.WSResponse
+import play.api.libs.ws.{ WSRequest, WSResponse }
 import play.api.libs.json.{ Reads, Json, JsValue }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.services.{ CacheService, HttpService, RoutesService }
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.duration.{ Duration, _ }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 import BacklogProvider._
 
 class BacklogOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+  baaseHttpService: HttpService, settings: OAuth2Settings, backlogApiSettings: BacklogApiSettings)(implicit executionContext: ExecutionContext)
+  extends OAuth2Client.Default(new BacklogHttpService(baaseHttpService, backlogApiSettings), backlogApiSettings.getOAuth2Settings(settings)) {
 
   def retrieveProfile(profileUrl: String, accessToken: String): Future[JsValue] = {
     httpService.url(profileUrl)
       .withHeaders("Authorization" -> s"Bearer $accessToken")
       .get().map(_.json)
+  }
+
+  def apiHost: String = backlogApiSettings.checkedApiHost()
+
+  def getUrlForSpace(url: String): String = backlogApiSettings.getUrlForSpace(url)
+}
+
+class BacklogHttpService(httpService: HttpService, backlogApiSettings: BacklogApiSettings) extends HttpService {
+
+  def url(url: String): WSRequest = {
+    // ensure apiHost is available
+    backlogApiSettings.checkedApiHost()
+    httpService.url(url)
   }
 }
 
@@ -46,22 +60,14 @@ class BacklogOAuth2Client(
  * A Backlog provider
  *  @param routesService
  *  @param cacheService
- *  @param httpService
- *  @param optSpaceIdOrApiHost One of the following:
- *  <ul>
- *    <li>Some("space-id.backlogtool.com")</li>
- *    <li>Some("space-id")</li>
- *    <li>None (when the data is in the session)</li>
- * </ul>
+ *  @param client
  */
 class BacklogProvider(
-  protected val routesService: RoutesService,
-  protected val cacheService: CacheService,
-  httpService: HttpService,
-  private var optSpaceIdOrApiHost: Option[String])(implicit val executionContext: ExecutionContext, val playEnv: Environment, val configuration: Configuration)
-    extends OAuth2Provider {
+  routesService: RoutesService,
+  cacheService: CacheService,
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
 
-  val identityProviderConfigurations = new IdentityProviderConfigurations.Default
   private val getAuthenticatedUserUrl = "https://{apiHost}/api/v2/users/myself"
   val AccessToken = "token"
 
@@ -71,33 +77,11 @@ class BacklogProvider(
 
   val id = BacklogProvider.Backlog
 
-  private lazy val apiHost: String = {
-    optSpaceIdOrApiHost.map { spaceIdOrApiHost =>
-      if (spaceIdOrApiHost.contains(".")) {
-        spaceIdOrApiHost
-      } else {
-        s"${spaceIdOrApiHost}.backlogtool.com"
-      }
-    }.getOrElse {
-      logger.error("[securesocial] optSpaceIdOrApiHost isn't set.")
+  val backlogClient: BacklogOAuth2Client = client match {
+    case client: BacklogOAuth2Client => client
+    case _ =>
+      logger.error("[securesocial] error to get a BacklogOAuth2Client instance")
       throw new AuthenticationException()
-    }
-  }
-
-  lazy val client = {
-    val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
-    val defaultSettings = oauth2SettingsBuilder.forProvider(id)
-    val authorizationUrl = getUrlForSpace(defaultSettings.authorizationUrl)
-    val accessTokenUrl = getUrlForSpace(defaultSettings.accessTokenUrl)
-    val settings = defaultSettings.copy(
-      authorizationUrl = authorizationUrl,
-      accessTokenUrl = accessTokenUrl
-    )
-    new BacklogOAuth2Client(httpService, settings)
-  }
-
-  private def getUrlForSpace(url: String): String = {
-    url.replace("{apiHost}", apiHost)
   }
 
   override protected def buildInfo(response: WSResponse): OAuth2Info = {
@@ -110,9 +94,9 @@ class BacklogProvider(
   }
 
   def fillProfile(info: OAuth2Info): Future[BasicProfile] = {
-    val url = getUrlForSpace(getAuthenticatedUserUrl)
+    val url = backlogClient.getUrlForSpace(getAuthenticatedUserUrl)
     logger.debug(s"[securesocial] getting profile info from $url")
-    client.retrieveProfile(url, info.accessToken).map { me =>
+    backlogClient.retrieveProfile(url, info.accessToken).map { me =>
       logger.debug("[securesocial] got response: " + Json.stringify(me))
       val errorResponse = me.asOpt[ErrorResponse]
       errorResponse.map { error =>
@@ -121,8 +105,7 @@ class BacklogProvider(
       }.getOrElse {
         val userInfo = me.as[AuthTestResponse]
         val extraInfo = Map(
-          "space_host_name" -> apiHost
-        )
+          "space_host_name" -> backlogClient.apiHost)
         BasicProfile(id, userInfo.id.toString, None, None, Some(userInfo.userId), Some(userInfo.mailAddress), None, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {
@@ -155,8 +138,7 @@ class BacklogProvider(
             // todo: review this -> clustered environments
             stateOk <- cacheService.getAs[Tuple2[String, String]](sessionId).map { optT =>
               (optT.map {
-                case (originalState, miscParam) =>
-                  optSpaceIdOrApiHost = Some(miscParam)
+                case (originalState, _) =>
                   val stateInQueryString = request.queryString.get(OAuth2Constants.State).flatMap(_.headOption).getOrElse(throw new AuthenticationException())
                   originalState == stateInQueryString
               }).getOrElse {
@@ -200,7 +182,7 @@ object BacklogProvider {
     code: Int,
     moreInfo: String)
   case class ErrorResponse(
-      errors: List[Error]) {
+    errors: List[Error]) {
     def messages = {
       errors.map(_.message).mkString(",")
     }
@@ -211,4 +193,77 @@ object BacklogProvider {
     roleType: Int,
     lang: Option[String],
     mailAddress: String)
+
+  /**
+   * Create a BacklogApiSettings.
+   *
+   *  @param cacheService
+   *  @param optSpaceIdOrApiHost One of the following:
+   *  <ul>
+   *    <li>Some("space-id.backlogtool.com")</li>
+   *    <li>Some("space-id")</li>
+   *    <li>None (when the data is in the session)</li>
+   *  </ul>
+   */
+  def createBacklogApiSettings(
+    cacheService: CacheService,
+    optSpaceIdOrApiHost: Option[String],
+    optRequest: Option[RequestHeader])(implicit executionContext: ExecutionContext): BacklogApiSettings = {
+    val awaitTimeout: Duration = 5.seconds
+
+    val apiHost: Option[String] = optSpaceIdOrApiHost.orElse {
+      optRequest.flatMap(request => Await.result(getMiscParamFromSession(request, cacheService), awaitTimeout))
+    }.map { spaceIdOrApiHost =>
+      if (spaceIdOrApiHost.contains(".")) {
+        spaceIdOrApiHost
+      } else {
+        s"${spaceIdOrApiHost}.backlogtool.com"
+      }
+    }
+
+    BacklogApiSettings(apiHost)
+  }
+
+  private def getMiscParamFromSession(
+    request: RequestHeader,
+    cacheService: CacheService)(implicit executionContext: ExecutionContext): Future[Option[String]] = {
+    request.session.get(IdentityProvider.SessionId).map { sessionId =>
+      val state = request.queryString.get(OAuth2Constants.State).flatMap(_.headOption)
+      cacheService.getAs[(String, String)](sessionId).map {
+        case Some((originalState, miscParam)) if state.contains(originalState) =>
+          Some(miscParam)
+        case _ => None
+      } recover {
+        case _ => None
+      }
+    }.getOrElse(Future(None))
+  }
+}
+
+case class BacklogApiSettings(optApiHost: Option[String]) {
+
+  private val logger = play.api.Logger(this.getClass.getName)
+
+  def getOAuth2Settings(settings: OAuth2Settings): OAuth2Settings = {
+    optApiHost.map { apiHost =>
+      settings.copy(
+        authorizationUrl = getUrlForSpace(settings.authorizationUrl, apiHost),
+        accessTokenUrl = getUrlForSpace(settings.accessTokenUrl, apiHost))
+    }.getOrElse(settings)
+  }
+
+  private def getUrlForSpace(url: String, apiHost: String): String = {
+    url.replace("{apiHost}", apiHost)
+  }
+
+  def getUrlForSpace(url: String): String = {
+    getUrlForSpace(url, checkedApiHost())
+  }
+
+  def checkedApiHost(): String = {
+    optApiHost.getOrElse {
+      logger.error("[securesocial] optApiHost isn't set.")
+      throw new AuthenticationException()
+    }
+  }
 }

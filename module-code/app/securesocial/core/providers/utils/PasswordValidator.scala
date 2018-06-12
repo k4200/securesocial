@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,9 +16,6 @@
  */
 package securesocial.core.providers.utils
 
-import javax.inject.Inject
-
-import play.api.{ Configuration, Application }
 import play.api.data.validation.{ Constraint, Invalid, Valid }
 import securesocial.core.RuntimeEnvironment
 
@@ -55,9 +52,7 @@ object PasswordValidator {
    * The minimum length can be configured setting a minimumPasswordLength property for userpass.
    * Defaults to 8 if not specified.
    */
-  class Default()(implicit val configuration: Configuration) extends PasswordValidator {
-    val requiredLength = configuration.getInt(Default.PasswordLengthProperty).getOrElse(Default.Length)
-
+  class Default(requiredLength: Int) extends PasswordValidator {
     override def validate(password: String): Either[(String, Seq[Any]), Unit] = {
       if (password.length >= requiredLength) {
         Right(())
@@ -67,9 +62,7 @@ object PasswordValidator {
   }
 
   object Default {
-    val Length = 8
     val PasswordLengthProperty = "securesocial.userpass.minimumPasswordLength"
     val InvalidPasswordMessage = "securesocial.signup.invalidPassword"
   }
-
 }

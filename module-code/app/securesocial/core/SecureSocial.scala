@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,11 +16,9 @@
  */
 package securesocial.core
 
-import javax.inject.Inject
-
-import play.api.{ Environment, Configuration, Application }
+import play.api.Configuration
 import play.api.http.HeaderNames
-import play.api.i18n.{ Messages, I18nSupport, MessagesApi }
+import play.api.i18n.{ I18nSupport, Messages, MessagesApi }
 import play.api.libs.json.Json
 import play.api.mvc.{ Result, _ }
 import play.twirl.api.Html
@@ -30,31 +28,21 @@ import securesocial.core.utils._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+trait SecureSocialController extends BaseController with SecureSocial {
+  override def messagesApi = env.messagesApi
+}
+
 /**
  * Provides the actions that can be used to protect controllers and retrieve the current user
  * if available.
  *
  */
-trait SecureSocial extends Controller with I18nSupport {
-  import SecureSocial._
-
-  implicit val configuration: Configuration
-
+trait SecureSocial extends ControllerHelpers with I18nSupport { self =>
   implicit val env: RuntimeEnvironment
-
-  implicit val playEnv: Environment
-
   implicit def executionContext: ExecutionContext = env.executionContext
+  override implicit def messagesApi: MessagesApi = env.messagesApi
 
   protected val notAuthenticatedJson = Unauthorized(Json.toJson(Map("error" -> "Credentials required"))).as(JSON)
-
-  protected val notAuthorizedJson = Forbidden(Json.toJson(Map("error" -> "Not authorized"))).as(JSON)
-
-  protected def notAuthorizedPage()(implicit request: RequestHeader): Html = env.viewTemplates.getNotAuthorizedPage
-
-  @Inject
-  implicit var messagesApi: MessagesApi = null
-
   protected def notAuthenticatedResult[A](implicit request: Request[A]): Future[Result] = {
     Future.successful {
       render {
@@ -67,6 +55,8 @@ trait SecureSocial extends Controller with I18nSupport {
     }
   }
 
+  protected val notAuthorizedJson = Forbidden(Json.toJson(Map("error" -> "Not authorized"))).as(JSON)
+  protected def notAuthorizedPage()(implicit request: RequestHeader): Html = env.viewTemplates.getNotAuthorizedPage
   protected def notAuthorizedResult[A](implicit request: Request[A]): Future[Result] = {
     Future.successful {
       render {
@@ -89,7 +79,6 @@ trait SecureSocial extends Controller with I18nSupport {
 
     /**
      * Creates a secured action
-     *
      * @param authorize an Authorize object that checks if the user is authorized to invoke the action
      */
     def apply[A](authorize: Authorization[env.U]) = new SecuredActionBuilder(Some(authorize))
@@ -101,39 +90,42 @@ trait SecureSocial extends Controller with I18nSupport {
    * @param authorize an Authorize object that checks if the user is authorized to invoke the action
    */
   class SecuredActionBuilder(authorize: Option[Authorization[env.U]] = None)
-      extends ActionBuilder[({ type R[A] = SecuredRequest[A, env.U] })#R] {
-
+    extends ActionBuilder[({ type R[A] = SecuredRequest[A, env.U] })#R, AnyContent] {
     override protected implicit def executionContext: ExecutionContext = env.executionContext
+    override def parser: BodyParser[AnyContent] = env.parsers.anyContent
 
     private val logger = play.api.Logger("securesocial.core.SecuredActionBuilder")
 
     def invokeSecuredBlock[A](authorize: Option[Authorization[env.U]], request: Request[A],
-      block: SecuredRequest[A, env.U] => Future[Result]): Future[Result] = {
-      env.authenticatorService.fromRequest(request).flatMap {
-        case Some(authenticator) if authenticator.isValid =>
-          authenticator.touch.flatMap { updatedAuthenticator =>
-            val user = updatedAuthenticator.user
-            if (authorize.isEmpty || authorize.get.isAuthorized(user, request)) {
-              block(SecuredRequest(user, updatedAuthenticator, request)).flatMap {
-                _.touchingAuthenticator(updatedAuthenticator)
+      block: SecuredRequest[A, env.U] => Future[Result]): Future[Result] =
+      {
+        env.authenticatorService.fromRequest(request).flatMap {
+          case Some(authenticator) if authenticator.isValid =>
+            authenticator.touch.flatMap { updatedAuthenticator =>
+              val user = updatedAuthenticator.user
+              if (authorize.isEmpty || authorize.get.isAuthorized(user, request)) {
+                block(SecuredRequest(user, updatedAuthenticator, request)).flatMap {
+                  _.touchingAuthenticator(updatedAuthenticator)
+                }
+              } else {
+                notAuthorizedResult(request)
               }
-            } else {
-              notAuthorizedResult(request)
             }
-          }
-        case Some(authenticator) if !authenticator.isValid =>
-          logger.debug("[securesocial] user tried to access with invalid authenticator : '%s'".format(request.uri))
-          notAuthenticatedResult(request).flatMap { _.discardingAuthenticator(authenticator) }
-        case None =>
-          logger.debug("[securesocial] anonymous user trying to access : '%s'".format(request.uri))
-          notAuthenticatedResult(request)
+          case Some(authenticator) if !authenticator.isValid =>
+            logger.debug("[securesocial] user tried to access with invalid authenticator : '%s'".format(request.uri))
+            notAuthenticatedResult(request).flatMap { _.discardingAuthenticator(authenticator) }
+          case None =>
+            logger.debug("[securesocial] anonymous user trying to access : '%s'".format(request.uri))
+            notAuthenticatedResult(request)
+        }
       }
-    }
 
-    override def invokeBlock[A](request: Request[A],
-      block: (SecuredRequest[A, env.U]) => Future[Result]): Future[Result] = {
-      invokeSecuredBlock(authorize, request, block)
-    }
+    override def invokeBlock[A](
+      request: Request[A],
+      block: (SecuredRequest[A, env.U]) => Future[Result]): Future[Result] =
+      {
+        invokeSecuredBlock(authorize, request, block)
+      }
   }
 
   /**
@@ -146,27 +138,32 @@ trait SecureSocial extends Controller with I18nSupport {
   /**
    * The UserAwareAction builder
    */
-  class UserAwareActionBuilder extends ActionBuilder[({ type R[A] = RequestWithUser[A, env.U] })#R] {
+  class UserAwareActionBuilder extends ActionBuilder[({ type R[A] = RequestWithUser[A, env.U] })#R, AnyContent] {
     override protected implicit def executionContext: ExecutionContext = env.executionContext
+    override def parser: BodyParser[AnyContent] = env.parsers.anyContent
 
-    override def invokeBlock[A](request: Request[A],
-      block: (RequestWithUser[A, env.U]) => Future[Result]): Future[Result] = {
-      env.authenticatorService.fromRequest(request).flatMap {
-        case Some(authenticator) if authenticator.isValid =>
-          authenticator.touch.flatMap {
-            a => block(RequestWithUser(Some(a.user), Some(a), request))
-          }
-        case Some(authenticator) if !authenticator.isValid =>
-          block(RequestWithUser(None, None, request)).flatMap(_.discardingAuthenticator(authenticator))
-        case None =>
-          block(RequestWithUser(None, None, request))
+    override def invokeBlock[A](
+      request: Request[A],
+      block: (RequestWithUser[A, env.U]) => Future[Result]): Future[Result] =
+      {
+        env.authenticatorService.fromRequest(request).flatMap {
+          case Some(authenticator) if authenticator.isValid =>
+            authenticator.touch.flatMap {
+              a => block(RequestWithUser(Some(a.user), Some(a), request))
+            }
+          case Some(authenticator) if !authenticator.isValid =>
+            block(RequestWithUser(None, None, request)).flatMap(_.discardingAuthenticator(authenticator))
+          case None =>
+            block(RequestWithUser(None, None, request))
+        }
       }
-    }
   }
+}
 
-  val enableRefererAsOriginalUrl = {
-    configuration.getBoolean("securesocial.enableRefererAsOriginalUrl").getOrElse(false)
-  }
+case class EnableRefererAsOriginalUrl(value: Boolean) extends AnyVal
+object EnableRefererAsOriginalUrl {
+  def apply(configuration: Configuration): EnableRefererAsOriginalUrl =
+    EnableRefererAsOriginalUrl(configuration.get[Boolean]("securesocial.enableRefererAsOriginalUrl"))
 }
 
 object SecureSocial {
@@ -185,7 +182,6 @@ object SecureSocial {
 
   /**
    * Saves the referer as original url in the session if it's not yet set.
-   *
    * @param result the result that maybe enhanced with an updated session
    * @return the result that's returned to the client
    */
@@ -205,7 +201,6 @@ object SecureSocial {
 
   /**
    * Gets the referer URI from the implicit request
-   *
    * @return the path and query string of the referer path and query
    */
   def refererPathAndQuery[A](implicit request: Request[A]): Option[String] = {
@@ -224,7 +219,7 @@ object SecureSocial {
    * gives you will be enough.
    *
    * @param request the current request
-   * @param env    the current environment
+   * @param env the current environment
    * @return a future with an option user
    */
   def currentUser(implicit request: RequestHeader, env: RuntimeEnvironment, executionContext: ExecutionContext): Future[Option[env.U]] = {

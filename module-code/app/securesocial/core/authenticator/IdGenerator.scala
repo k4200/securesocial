@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,7 +17,6 @@
 package securesocial.core.authenticator
 
 import java.security.SecureRandom
-import javax.inject.Inject
 
 import play.api.Configuration
 import play.api.libs.Codecs
@@ -32,18 +31,15 @@ trait IdGenerator {
 }
 
 object IdGenerator {
-
   /**
    * The default id generator
    */
-  class Default(implicit val configuration: Configuration) extends IdGenerator {
+  class Default(configuration: Configuration) extends IdGenerator {
     //todo: this needs improvement, several threads will wait for the synchronized block in SecureRandom.
     // I will probably need a pool of SecureRandom instances.
     val random = new SecureRandom()
-    val DefaultSizeInBytes = 128
     val IdLengthKey = "securesocial.idLengthInBytes"
-
-    val IdSizeInBytes = configuration.getInt(IdLengthKey).getOrElse(DefaultSizeInBytes)
+    val IdSizeInBytes = configuration.get[Int](IdLengthKey)
 
     /**
      * Generates a new id using SecureRandom
@@ -53,11 +49,10 @@ object IdGenerator {
     def generate: Future[String] = {
       //todo: review the usage of future here
       Future.successful {
-        var randomValue = new Array[Byte](IdSizeInBytes)
+        val randomValue = new Array[Byte](IdSizeInBytes)
         random.nextBytes(randomValue)
         Codecs.toHexString(randomValue)
       }
     }
   }
-
 }

@@ -16,11 +16,13 @@
  */
 package securesocial.core.providers
 
+import io.methvin.play.autoconfig.AutoConfig
 import org.joda.time.DateTime
-import play.api.{ Configuration, Environment }
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.i18n.{ I18nSupport, MessagesApi }
 import play.api.mvc._
+import play.api.{ ConfigLoader, Configuration }
 import securesocial.controllers.ViewTemplates
 import securesocial.core.AuthenticationResult.{ Authenticated, NavigationFlow }
 import securesocial.core._
@@ -32,19 +34,19 @@ import scala.concurrent.{ ExecutionContext, Future }
 /**
  * A username password provider
  */
-class UsernamePasswordProvider[U](userService: UserService[U],
+class UsernamePasswordProvider[U](
+  userService: UserService[U],
   avatarService: Option[AvatarService],
   viewTemplates: ViewTemplates,
-  passwordHashers: Map[String, PasswordHasher])(implicit val executionContext: ExecutionContext, val configuration: Configuration, val playEnv: Environment)
-    extends IdentityProvider with ApiSupport with Controller {
+  passwordHashers: Map[String, PasswordHasher],
+  val messagesApi: MessagesApi)(implicit val executionContext: ExecutionContext)
+  extends IdentityProvider with ApiSupport with I18nSupport {
 
   override val id = UsernamePasswordProvider.UsernamePassword
 
   def authMethod = AuthenticationMethod.UserPassword
 
   val InvalidCredentials = "securesocial.login.invalidCredentials"
-
-  protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
 
   def authenticateForApi(implicit request: Request[AnyContent]): Future[AuthenticationResult] = {
     doAuthentication(apiMode = true)
@@ -108,38 +110,26 @@ class UsernamePasswordProvider[U](userService: UserService[U],
   }
 }
 
+case class UsernamePasswordConfig(
+  withUserNameSupport: Boolean,
+  sendWelcomeEmail: Boolean,
+  hasher: String,
+  enableTokenJob: Boolean,
+  signupSkipLogin: Boolean,
+  minimumPasswordLength: Int)
+object UsernamePasswordConfig {
+  implicit val configLoader: ConfigLoader[UsernamePasswordConfig] = AutoConfig.loader
+  def fromConfiguration(configuration: Configuration): UsernamePasswordConfig =
+    configuration.get[UsernamePasswordConfig]("securesocial.userpass")
+}
+
 object UsernamePasswordProvider {
   val UsernamePassword = "userpass"
+
   val loginForm = Form(
     tuple(
       "username" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )
-  )
-}
-
-trait UsernamePasswordProviderConfigurations {
-  val withUserNameSupport: Boolean
-  val sendWelcomeEmail: Boolean
-  val hasher: String
-  val enableTokenJob: Boolean
-  val signupSkipLogin: Boolean
-}
-
-object UsernamePasswordProviderConfigurations {
-  class Default(implicit val configuration: Configuration) extends UsernamePasswordProviderConfigurations {
-    private val Key = "securesocial.userpass.withUserNameSupport"
-    private val SendWelcomeEmailKey = "securesocial.userpass.sendWelcomeEmail"
-    private val Hasher = "securesocial.userpass.hasher"
-    private val EnableTokenJob = "securesocial.userpass.enableTokenJob"
-    private val SignupSkipLogin = "securesocial.userpass.signupSkipLogin"
-
-    lazy val withUserNameSupport = configuration.getBoolean(Key).getOrElse(false)
-    lazy val sendWelcomeEmail = configuration.getBoolean(SendWelcomeEmailKey).getOrElse(true)
-    lazy val hasher = configuration.getString(Hasher).getOrElse(PasswordHasher.id)
-    lazy val enableTokenJob = configuration.getBoolean(EnableTokenJob).getOrElse(true)
-    lazy val signupSkipLogin = configuration.getBoolean(SignupSkipLogin).getOrElse(false)
-  }
+      "password" -> nonEmptyText))
 }
 
 /**

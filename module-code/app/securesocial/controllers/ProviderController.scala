@@ -18,12 +18,12 @@ package securesocial.controllers
 
 import javax.inject.Inject
 
-import play.api.{ Environment, Configuration, Application }
-import play.api.i18n.Messages
+import play.api.Configuration
+import play.api.i18n.{ I18nSupport, Messages }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.authenticator.CookieAuthenticator
-import securesocial.core.providers.UsernamePasswordProvider
+import securesocial.core.providers.{ LinkedInProvider, TwitterProvider, UsernamePasswordProvider, XingProvider }
 import securesocial.core.services.SaveMode
 import securesocial.core.utils._
 
@@ -32,15 +32,18 @@ import scala.concurrent.Future
 /**
  * A default controller that uses the BasicProfile as the user type
  */
-class ProviderController @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment)
+class ProviderController @Inject() (override implicit val env: RuntimeEnvironment)
   extends BaseProviderController
 
 /**
  * A trait that provides the means to authenticate users for web applications
  */
-trait BaseProviderController extends SecureSocial {
+trait BaseProviderController extends SecureSocial with I18nSupport {
+  import securesocial.controllers.ProviderControllerHelper.toUrl
 
-  import securesocial.controllers.ProviderControllerHelper.{ logger, toUrl }
+  val logger = play.api.Logger(this.getClass.getName)
+
+  val configuration: Configuration = env.configuration
 
   /**
    * The authentication entry point for GET requests
@@ -90,7 +93,7 @@ trait BaseProviderController extends SecureSocial {
   private def builder() = {
 
     //todo: this should be configurable maybe
-    env.authenticatorService.find(env.cookieAuthenticatorConfigurations.Id).getOrElse {
+    env.authenticatorService.find(CookieAuthenticator.Id).getOrElse {
       logger.error(s"[securesocial] missing CookieAuthenticatorBuilder")
       throw new AuthenticationException()
     }
@@ -103,18 +106,19 @@ trait BaseProviderController extends SecureSocial {
    * @param saveMode One of SaveMode.*
    * @param miscParam
    */
-  private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String]): Option[IdentityProvider] = provider match {
-    case UsernamePasswordProvider.UsernamePassword =>
-      Some(env.createProvider(provider, None, miscParam))
+  private def getProvider(provider: String, scope: Option[String], authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String])(implicit request: RequestHeader): Option[IdentityProvider] = provider match {
+    case _ if env.customProviders.contains(provider) =>
+      env.customProviders.get(provider)
+    case LinkedInProvider.LinkedIn | TwitterProvider.Twitter | XingProvider.Xing | UsernamePasswordProvider.UsernamePassword =>
+      Some(env.createProvider(provider, None, miscParam, Some(request)))
     case _ =>
-      val oauth2SettingsBuilder = new OAuth2SettingsBuilder.Default
       val settings = if (scope.isDefined) {
-        oauth2SettingsBuilder.forProvider(provider).copy(scope = scope)
+        OAuth2Settings.forProvider(configuration, provider).copy(scope = scope)
       } else {
-        oauth2SettingsBuilder.forProvider(provider)
+        OAuth2Settings.forProvider(configuration, provider)
       }
       val defaultAuthUrlParams = settings.authorizationUrlParams
-      Some(env.createProvider(provider, Some(settings.copy(authorizationUrlParams = defaultAuthUrlParams ++ authorizationUrlParams)), miscParam))
+      Some(env.createProvider(provider, Some(settings.copy(authorizationUrlParams = defaultAuthUrlParams ++ authorizationUrlParams)), miscParam, Some(request)))
   }
 
   private def getSaveMode(saveModeStr: Option[String], existsUser: Boolean): SaveMode = {
@@ -146,7 +150,7 @@ trait BaseProviderController extends SecureSocial {
           logger.error(s"[securesocial] authentication failed, reason: ${failed.error}")
           throw new AuthenticationException()
         case flow: AuthenticationResult.NavigationFlow => Future.successful {
-          flow.result.addToSession(paramsForSession.toList.filter(_._2.isDefined).map(t => t._1 -> t._2.get): _*)
+          flow.result.addingToSession(paramsForSession.toList.filter(_._2.isDefined).map(t => t._1 -> t._2.get): _*)
         }
         case authenticated: AuthenticationResult.Authenticated =>
           if (authenticationFlow) {
@@ -158,7 +162,7 @@ trait BaseProviderController extends SecureSocial {
                 val evt = if (saveMode == SaveMode.LoggedIn) new LoginEvent(userForAction) else new SignUpEvent(userForAction)
                 val sessionAfterEvents = Events.fire(evt).getOrElse(request.session)
                 builder().fromUser(userForAction).flatMap { authenticator =>
-                  val url = toUrl(sessionAfterEvents)
+                  val url = toUrl(sessionAfterEvents, configuration)
                   logger.debug(s"[securesocial] redirecting to $url")
                   Redirect(url).withSession(sessionAfterEvents -
                     SecureSocial.OriginalUrlKey -
@@ -175,7 +179,7 @@ trait BaseProviderController extends SecureSocial {
                 for (
                   linked <- env.userService.link(currentUser, authenticated.profile, messages);
                   updatedAuthenticator <- request.authenticator.get.updateUser(linked);
-                  result <- Redirect(toUrl(modifiedSession)).withSession(modifiedSession -
+                  result <- Redirect(toUrl(modifiedSession, configuration)).withSession(modifiedSession -
                     SecureSocial.OriginalUrlKey -
                     SecureSocial.SaveModeKey -
                     IdentityProvider.SessionId -
@@ -205,8 +209,6 @@ trait BaseProviderController extends SecureSocial {
 }
 
 object ProviderControllerHelper {
-  val logger = play.api.Logger("securesocial.controllers.ProviderController")
-
   /**
    * The property that specifies the page the user is redirected to if there is no original URL saved in
    * the session.
@@ -221,16 +223,15 @@ object ProviderControllerHelper {
   /**
    * The application context
    */
-  val ApplicationContext = "application.context"
+  val ApplicationContext = "play.http.context"
 
   /**
    * The url where the user needs to be redirected after succesful authentication.
    *
    * @return
    */
-  def landingUrl(implicit configuration: Configuration) = configuration.getString(onLoginGoTo).getOrElse(
-    configuration.getString(ApplicationContext).getOrElse(Root)
-  )
+  def landingUrl(configuration: Configuration) = configuration.get[Option[String]](onLoginGoTo).getOrElse(
+    configuration.get[String](ApplicationContext))
 
   /**
    * Returns the url that the user should be redirected to after login
@@ -238,5 +239,5 @@ object ProviderControllerHelper {
    * @param session
    * @return
    */
-  def toUrl(session: Session)(implicit configuration: Configuration) = session.get(SecureSocial.OriginalUrlKey).getOrElse(ProviderControllerHelper.landingUrl)
+  def toUrl(session: Session, configuration: Configuration) = session.get(SecureSocial.OriginalUrlKey).getOrElse(ProviderControllerHelper.landingUrl(configuration))
 }

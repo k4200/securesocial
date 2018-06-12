@@ -16,16 +16,15 @@
  */
 package securesocial.core.providers
 
-import org.joda.time.{ DateTime, Seconds }
 import org.joda.time.format.DateTimeFormat
-import play.api.{ Environment, Configuration }
+import org.joda.time.{ DateTime, Seconds }
 import play.api.http.HeaderNames
 import play.api.libs.ws.WSResponse
 import play.api.mvc.Request
-import securesocial.core.{ AuthenticationException, BasicProfile, OAuth2Client, OAuth2Constants, OAuth2Info, OAuth2Provider }
 import securesocial.core.services.{ CacheService, RoutesService }
+import securesocial.core._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 import scala.xml.Node
 
 /**
@@ -41,10 +40,11 @@ import scala.xml.Node
  *  - the access token response is delivered in XML (instead of JSON as
  *    specified in http://tools.ietf.org/html/rfc6749#section-5.1)
  */
-class ConcurProvider(routesService: RoutesService,
+class ConcurProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   /** formatter used to parse the expiration date returned from Concur */
   private val ExpirationDateFormatter = DateTimeFormat.forPattern("MM/dd/yyyy HH:mm:ss a")
 
@@ -55,7 +55,6 @@ class ConcurProvider(routesService: RoutesService,
    * used to get the access token. Instead, a HTTP GET is used in their implementation.
    */
   override def getAccessToken[A](code: String)(implicit request: Request[A]): Future[OAuth2Info] = {
-    val settings = client.settings
     val url = settings.accessTokenUrl + "?" + OAuth2Constants.Code + "=" + code + "&" +
       OAuth2Constants.ClientId + "=" + settings.clientId + "&" +
       OAuth2Constants.ClientSecret + "=" + settings.clientSecret
@@ -81,16 +80,14 @@ class ConcurProvider(routesService: RoutesService,
       (xml \\ ConcurProvider.AccessToken \\ ConcurProvider.ExpirationDate).headOption.map(v => {
         Seconds.secondsBetween(DateTime.now(), ExpirationDateFormatter.parseDateTime(v.text)).getSeconds
       }),
-      (xml \\ ConcurProvider.AccessToken \\ ConcurProvider.RefreshToken).headOption.map(_.text)
-    )
+      (xml \\ ConcurProvider.AccessToken \\ ConcurProvider.RefreshToken).headOption.map(_.text))
   }
 
   override def fillProfile(info: OAuth2Info): Future[BasicProfile] = {
     val accessToken = info.accessToken
     client.httpService.url(ConcurProvider.UserProfileApi).withHeaders(
       HeaderNames.AUTHORIZATION -> "OAuth %s".format(accessToken),
-      HeaderNames.CONTENT_TYPE -> "application/xml"
-    ).get().map { response =>
+      HeaderNames.CONTENT_TYPE -> "application/xml").get().map { response =>
         val xml = response.xml
         logger.debug("[securesocial] got xml back [" + xml + "]")
         (xml \\ ConcurProvider.Error).headOption match {

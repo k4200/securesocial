@@ -1,4 +1,4 @@
-@(current: service.DemoUser)(implicit request: RequestHeader)
+@(current: service.DemoUser)
 
     @main("SecureSocial - Account Link Result") {
 <div class="page-header">
@@ -46,5 +46,4 @@
 </div>
 
 <a class="btn" href="/">Ok</a>
-<a class="btn" href="@securesocial.controllers.routes.LoginPage.login()">Login</a>
 }

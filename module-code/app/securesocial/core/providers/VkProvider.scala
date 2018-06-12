@@ -1,6 +1,5 @@
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.json.JsObject
 import securesocial.core._
 import securesocial.core.services.{ CacheService, RoutesService }
@@ -10,10 +9,11 @@ import scala.concurrent.Future
 /**
  * A Vk provider
  */
-class VkProvider(routesService: RoutesService,
+class VkProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   val GetProfilesApi = "https://api.vk.com/method/getProfiles?fields=uid,first_name,last_name,photo&access_token="
   val Response = "response"
   val Id = "uid"
@@ -34,8 +34,7 @@ class VkProvider(routesService: RoutesService,
           val message = (error \ ErrorMessage).as[String]
           val errorCode = (error \ ErrorCode).as[Int]
           logger.error(
-            s"[securesocial] error retrieving profile information from Vk. Error code = $errorCode, message = $message"
-          )
+            s"[securesocial] error retrieving profile information from Vk. Error code = $errorCode, message = $message")
           throw new AuthenticationException()
         case _ =>
           val me = (json \ Response).apply(0)

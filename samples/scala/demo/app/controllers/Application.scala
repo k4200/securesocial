@@ -18,14 +18,14 @@ package controllers
 
 import javax.inject.Inject
 
+import play.api.mvc.{ ControllerComponents, RequestHeader }
 import securesocial.core._
-import service.{ MyEnvironment, MyEventListener, DemoUser }
-import play.api.{ Configuration, Environment }
-import play.api.mvc.{ Action, RequestHeader }
+import service.MyEnvironment
 
-class Application @Inject() (implicit val env: RuntimeEnvironment, val configuration: Configuration, val playEnv: Environment) extends securesocial.core.SecureSocial {
+class Application @Inject() (val controllerComponents: ControllerComponents)(override implicit val env: MyEnvironment)
+  extends securesocial.core.SecureSocialController {
   def index = SecuredAction { implicit request =>
-    Ok(views.html.index(request.user.asInstanceOf[DemoUser].main))
+    Ok(views.html.index(request.user.main))
   }
 
   // a sample action using an authorization implementation
@@ -34,7 +34,7 @@ class Application @Inject() (implicit val env: RuntimeEnvironment, val configura
   }
 
   def linkResult = SecuredAction { implicit request =>
-    Ok(views.html.linkResult(request.user.asInstanceOf[DemoUser]))
+    Ok(views.html.linkResult(request.user))
   }
 
   /**
@@ -42,7 +42,7 @@ class Application @Inject() (implicit val env: RuntimeEnvironment, val configura
    */
   def currentUser = Action.async { implicit request =>
     SecureSocial.currentUser.map { maybeUser =>
-      val userId = maybeUser.map(_.asInstanceOf[DemoUser].main.userId).getOrElse("unknown")
+      val userId = maybeUser.map(_.main.userId).getOrElse("unknown")
       Ok(s"Your id is $userId")
     }
   }
@@ -50,8 +50,7 @@ class Application @Inject() (implicit val env: RuntimeEnvironment, val configura
   // An Authorization implementation that only authorizes uses that logged in using twitter
   case class WithProvider(provider: String) extends Authorization[env.U] {
     def isAuthorized(user: env.U, request: RequestHeader) = {
-      val demoUser = user.asInstanceOf[DemoUser]
-      demoUser.main.providerId == provider
+      user.main.providerId == provider
     }
   }
 }

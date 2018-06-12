@@ -16,9 +16,10 @@
  */
 package securesocial.core.authenticator
 
+import io.methvin.play.autoconfig.AutoConfig
 import org.joda.time.DateTime
-import play.api.{ Configuration, Environment }
 import play.api.mvc.{ Result, _ }
+import play.api.{ ConfigLoader, Configuration }
 
 import scala.concurrent.Future
 
@@ -34,18 +35,19 @@ import scala.concurrent.Future
  * @param creationDate the authenticator creation time
  * @param store the authenticator store where instances of this authenticator are persisted
  * @tparam U the user type (defined by the application using the module)
+ *
  * @see AuthenticatorStore
  * @see RuntimeEnvironment
  */
 case class HttpHeaderAuthenticator[U](id: String, user: U, expirationDate: DateTime,
   lastUsed: DateTime,
   creationDate: DateTime,
-  @transient store: AuthenticatorStore[HttpHeaderAuthenticator[U]],
-  override val storeBackedAuthenticatorConfigurations: HttpHeaderAuthenticatorConfigurations)
-    extends StoreBackedAuthenticator[U, HttpHeaderAuthenticator[U]] {
+  config: HttpHeaderConfig,
+  @transient store: AuthenticatorStore[HttpHeaderAuthenticator[U]])
+  extends StoreBackedAuthenticator[U, HttpHeaderAuthenticator[U]] {
 
-  override val idleTimeoutInMinutes = storeBackedAuthenticatorConfigurations.idleTimeout
-  override val absoluteTimeoutInSeconds = storeBackedAuthenticatorConfigurations.absoluteTimeoutInSeconds
+  override val idleTimeoutInMinutes = config.idleTimeoutInMinutes
+  override val absoluteTimeoutInSeconds = config.absoluteTimeoutInSeconds
   /**
    * Returns a copy of this authenticator with the given last used time
    *
@@ -80,12 +82,15 @@ case class HttpHeaderAuthenticator[U](id: String, user: U, expirationDate: DateT
  * @param generator a session id generator
  * @tparam U the user object type
  */
-class HttpHeaderAuthenticatorBuilder[U](store: AuthenticatorStore[HttpHeaderAuthenticator[U]], generator: IdGenerator, httpHeaderAuthenticatorConfigurations: HttpHeaderAuthenticatorConfigurations)
-    extends AuthenticatorBuilder[U] {
+class HttpHeaderAuthenticatorBuilder[U](
+  store: AuthenticatorStore[HttpHeaderAuthenticator[U]],
+  generator: IdGenerator,
+  config: HttpHeaderConfig)
+  extends AuthenticatorBuilder[U] {
 
   import store.executionContext
 
-  val id = httpHeaderAuthenticatorConfigurations.Id
+  val id = HttpHeaderAuthenticator.Id
 
   /**
    * Creates an instance of a HttpHeaderAuthenticator from the http request
@@ -94,7 +99,7 @@ class HttpHeaderAuthenticatorBuilder[U](store: AuthenticatorStore[HttpHeaderAuth
    * @return an optional HttpHeaderAuthenticator instance.
    */
   override def fromRequest(request: RequestHeader): Future[Option[HttpHeaderAuthenticator[U]]] = {
-    request.headers.get(httpHeaderAuthenticatorConfigurations.headerName) match {
+    request.headers.get(config.name) match {
       case Some(value) => store.find(value).map { retrieved =>
         retrieved.map { _.copy(store = store) }
       }
@@ -112,33 +117,26 @@ class HttpHeaderAuthenticatorBuilder[U](store: AuthenticatorStore[HttpHeaderAuth
     generator.generate.flatMap {
       id =>
         val now = DateTime.now()
-        val expirationDate = now.plusMinutes(httpHeaderAuthenticatorConfigurations.absoluteTimeout)
-        val authenticator = HttpHeaderAuthenticator(id, user, expirationDate, now, now, store, httpHeaderAuthenticatorConfigurations)
-        store.save(authenticator, httpHeaderAuthenticatorConfigurations.absoluteTimeoutInSeconds)
+        val expirationDate = now.plusMinutes(config.absoluteTimeoutInMinutes)
+        val authenticator = HttpHeaderAuthenticator(id, user, expirationDate, now, now, config, store)
+        store.save(authenticator, config.absoluteTimeoutInSeconds)
     }
   }
 }
 
-trait HttpHeaderAuthenticatorConfigurations extends StoreBackedAuthenticatorConfigurations {
-  val Id = "token"
-  val HeaderNameKey = "securesocial.auth-header.name"
+case class HttpHeaderConfig(
+  name: String,
+  idleTimeoutInMinutes: Int,
+  absoluteTimeoutInMinutes: Int) {
+  def absoluteTimeoutInSeconds: Int = absoluteTimeoutInMinutes * 60
+}
+object HttpHeaderConfig {
+  implicit val configLoader: ConfigLoader[HttpHeaderConfig] = AutoConfig.loader
 
-  // default values
-  val DefaultHeaderName = "X-Auth-Token"
-
-  val headerName: String
-  val absoluteTimeout: Int
-  val absoluteTimeoutInSeconds: Int
+  def fromConfiguration(configuration: Configuration): HttpHeaderConfig =
+    configuration.get[HttpHeaderConfig]("securesocial.auth-header")
 }
 
-object HttpHeaderAuthenticatorConfigurations {
-  class Default(implicit val configuration: Configuration, environment: Environment) extends HttpHeaderAuthenticatorConfigurations {
-    lazy val headerName = configuration.getString(HeaderNameKey).getOrElse(DefaultHeaderName)
-
-    private lazy val cookieAuthenticatorConfigurations: CookieAuthenticatorConfigurations = new CookieAuthenticatorConfigurations.Default()
-    // using the same properties than the CookieBased authenticator for now.
-    lazy val idleTimeout = cookieAuthenticatorConfigurations.idleTimeout
-    lazy val absoluteTimeout = cookieAuthenticatorConfigurations.absoluteTimeout
-    lazy val absoluteTimeoutInSeconds = cookieAuthenticatorConfigurations.absoluteTimeoutInSeconds
-  }
+object HttpHeaderAuthenticator {
+  val Id = "token"
 }

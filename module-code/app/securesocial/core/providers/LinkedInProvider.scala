@@ -17,11 +17,10 @@
 package securesocial.core.providers
 
 import securesocial.core._
-import play.api.libs.oauth.{ RequestToken, OAuthCalculator }
-import play.api.{ Environment, Configuration, Logger }
-import LinkedInProvider._
-import scala.concurrent.{ ExecutionContext, Future }
-import securesocial.core.services.{ RoutesService, CacheService, HttpService }
+import securesocial.core.providers.LinkedInProvider._
+import securesocial.core.services.{ CacheService, RoutesService }
+
+import scala.concurrent.Future
 
 /**
  * A LinkedIn Provider
@@ -30,11 +29,10 @@ class LinkedInProvider(
   routesService: RoutesService,
   cacheService: CacheService,
   client: OAuth1Client //= new OAuth1Client.Default(ServiceInfoHelper.forProvider(LinkedInProvider.LinkedIn), httpService)
-  )(implicit val configuration: Configuration, val playEnv: Environment) extends OAuth1Provider(
+) extends OAuth1Provider(
   routesService,
   cacheService,
-  client
-) {
+  client) {
   override val id = LinkedInProvider.LinkedIn
 
   override def fillProfile(info: OAuth1Info): Future[BasicProfile] = {
@@ -45,8 +43,7 @@ class LinkedInProvider(
           val requestId = (me \ RequestId).asOpt[String]
           val timestamp = (me \ Timestamp).asOpt[String]
           logger.error(
-            s"Error retrieving information from LinkedIn. Error code: $error, requestId: $requestId, message: $message, timestamp: $timestamp"
-          )
+            s"Error retrieving information from LinkedIn. Error code: $error, requestId: $requestId, message: $message, timestamp: $timestamp")
           throw new AuthenticationException()
         }
         case _ =>

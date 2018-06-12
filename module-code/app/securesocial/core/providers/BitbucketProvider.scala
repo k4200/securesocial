@@ -18,7 +18,6 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.ws.{ WSResponse, WSAuthScheme }
 import play.api.libs.json.{ Reads, Json, JsValue }
 import securesocial.core._
@@ -29,13 +28,12 @@ import scala.concurrent.{ ExecutionContext, Future }
 import BitbucketProvider.{ ErrorResponse, UserResponse }
 
 class BitbucketOAuth2Client(
-    httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
+  httpService: HttpService, settings: OAuth2Settings)(implicit executionContext: ExecutionContext) extends OAuth2Client.Default(httpService, settings)(executionContext) {
   override def exchangeCodeForToken(code: String, callBackUrl: String, builder: OAuth2InfoBuilder): Future[OAuth2Info] = {
     val params = Map(
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
       OAuth2Constants.Code -> Seq(code),
-      OAuth2Constants.RedirectUri -> Seq(callBackUrl)
-    ) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
+      OAuth2Constants.RedirectUri -> Seq(callBackUrl)) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
     httpService.url(settings.accessTokenUrl)
       .withAuth(settings.clientId, settings.clientSecret, WSAuthScheme.BASIC)
       .post(params).map(builder)
@@ -46,10 +44,11 @@ class BitbucketOAuth2Client(
 /**
  * A Bitbucket provider
  */
-class BitbucketProvider(routesService: RoutesService,
+class BitbucketProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://api.bitbucket.org/2.0/user?access_token=%s"
 
   implicit val errorResponseReads: Reads[ErrorResponse] = Json.reads[ErrorResponse]
@@ -76,8 +75,7 @@ class BitbucketProvider(routesService: RoutesService,
         case _ =>
           val userInfo = me.as[UserResponse]
           val extraInfo = Map(
-            "username" -> userInfo.username
-          )
+            "username" -> userInfo.username)
           BasicProfile(id, userInfo.uuid, None, None, Some(userInfo.display_name), None, None, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {
@@ -100,7 +98,7 @@ object BitbucketProvider {
     display_name: String,
     username: String)
 
-  def apply(routesService: RoutesService, cacheService: CacheService, dummyClient: OAuth2Client)(implicit executionContext: ExecutionContext, configuration: Configuration, playEnv: Environment): BitbucketProvider = {
+  def apply(routesService: RoutesService, cacheService: CacheService, dummyClient: OAuth2Client)(implicit executionContext: ExecutionContext): BitbucketProvider = {
     val client = new BitbucketOAuth2Client(dummyClient.httpService, dummyClient.settings)
     new BitbucketProvider(routesService, cacheService, client)
   }

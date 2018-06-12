@@ -16,9 +16,7 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Environment, Configuration }
 import play.api.libs.json.JsObject
-import play.api.libs.ws.WSResponse
 import securesocial.core._
 import securesocial.core.services.{ CacheService, RoutesService }
 
@@ -27,10 +25,11 @@ import scala.concurrent.Future
 /**
  * A Facebook Provider
  */
-class FacebookProvider(routesService: RoutesService,
+class FacebookProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture.type(large),email&return_ssl_resources=1&access_token="
   val Error = "error"
   val Message = "message"
@@ -57,8 +56,7 @@ class FacebookProvider(routesService: RoutesService,
           val errorType = (error \ Type).as[String]
           logger.error(
             "[securesocial] error retrieving profile information from Facebook. Error type: %s, message: %s".
-              format(errorType, message)
-          )
+              format(errorType, message))
           throw new AuthenticationException()
         case _ =>
           val userId = (me \ Id).as[String]

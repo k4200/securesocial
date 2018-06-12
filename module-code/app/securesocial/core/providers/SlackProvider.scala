@@ -18,23 +18,22 @@
  */
 package securesocial.core.providers
 
-import play.api.{ Configuration, Environment }
+import play.api.libs.json.{ Json, Reads }
 import play.api.libs.ws.WSResponse
-import play.api.libs.json.{ Reads, Json, JsValue }
 import securesocial.core._
+import securesocial.core.providers.SlackProvider.{ AuthTestResponse, CommonResponse }
 import securesocial.core.services.{ CacheService, RoutesService }
 
 import scala.concurrent.Future
 
-import SlackProvider.{ CommonResponse, AuthTestResponse }
-
 /**
  * A Slack provider
  */
-class SlackProvider(routesService: RoutesService,
+class SlackProvider(
+  routesService: RoutesService,
   cacheService: CacheService,
-  client: OAuth2Client)(implicit val configuration: Configuration, val playEnv: Environment)
-    extends OAuth2Provider.Base(routesService, client, cacheService) {
+  client: OAuth2Client)
+  extends OAuth2Provider(routesService, client, cacheService) {
   val GetAuthenticatedUser = "https://slack.com/api/auth.test?token=%s"
   val AccessToken = "token"
 
@@ -63,8 +62,7 @@ class SlackProvider(routesService: RoutesService,
           val userInfo = me.as[AuthTestResponse]
           val extraInfo = Map(
             "team_name" -> userInfo.team,
-            "team_id" -> userInfo.team_id
-          )
+            "team_id" -> userInfo.team_id)
           BasicProfile(id, userInfo.user_id, None, None, Some(userInfo.user), None, None, authMethod, oAuth2Info = Some(info), extraInfo = Some(extraInfo))
       }
     } recover {

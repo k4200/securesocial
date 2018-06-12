@@ -19,13 +19,14 @@ package securesocial.core
 import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
-import play.api.{ Environment, Configuration, Application }
+import com.typesafe.config.ConfigObject
+import io.methvin.play.autoconfig.AutoConfig
 import play.api.libs.json.{ JsError, JsSuccess, JsValue, Json }
 import play.api.libs.ws.WSResponse
 import play.api.mvc._
+import play.api.{ ConfigLoader, Configuration }
 import securesocial.core.services.{ CacheService, HttpService, RoutesService }
 
-import scala.collection.JavaConversions._
 import scala.concurrent.{ ExecutionContext, Future }
 
 trait OAuth2Client {
@@ -46,7 +47,7 @@ trait OAuth2Client {
 object OAuth2Client {
 
   class Default(val httpService: HttpService, val settings: OAuth2Settings)(implicit val executionContext: ExecutionContext)
-      extends OAuth2Client {
+    extends OAuth2Client {
 
     protected val logger = play.api.Logger(this.getClass.getName)
 
@@ -73,8 +74,7 @@ object OAuth2Client {
         OAuth2Constants.ClientSecret -> Seq(settings.clientSecret),
         OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
         OAuth2Constants.Code -> Seq(code),
-        OAuth2Constants.RedirectUri -> Seq(callBackUrl)
-      ) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
+        OAuth2Constants.RedirectUri -> Seq(callBackUrl)) ++ settings.accessTokenUrlParams.mapValues(Seq(_))
       httpService.url(settings.accessTokenUrl).post(params).map(builder)
     }
 
@@ -82,15 +82,19 @@ object OAuth2Client {
       httpService.url(profileUrl).get().map(_.json)
   }
 }
+/**
+ * Base class for all OAuth2 providers
+ */
+abstract class OAuth2Provider(
+  routesService: RoutesService,
+  client: OAuth2Client,
+  cacheService: CacheService)
+  extends IdentityProvider with ApiSupport {
 
-trait OAuth2Provider extends IdentityProvider with ApiSupport {
-  protected val routesService: RoutesService
-  protected val client: OAuth2Client
-  protected val cacheService: CacheService
-
-  protected implicit def executionContext: ExecutionContext
+  protected implicit val executionContext: ExecutionContext = client.executionContext
   protected val logger = play.api.Logger(this.getClass.getName)
 
+  val settings = client.settings
   def authMethod = AuthenticationMethod.OAuth2
 
   protected def getAccessToken[A](code: String)(implicit request: Request[A]): Future[OAuth2Info] = {
@@ -111,8 +115,7 @@ trait OAuth2Provider extends IdentityProvider with ApiSupport {
       (json \ OAuth2Constants.TokenType).asOpt[String],
       (json \ OAuth2Constants.ExpiresIn).asOpt[Int],
       (json \ OAuth2Constants.RefreshToken).asOpt[String],
-      (json \ OAuth2Constants.Scope).asOpt[String]
-    )
+      (json \ OAuth2Constants.Scope).asOpt[String])
   }
 
   private[this] def validateOauthState(request: Request[AnyContent]): Future[Boolean] = {
@@ -171,7 +174,6 @@ trait OAuth2Provider extends IdentityProvider with ApiSupport {
 
   /**
    * Defines the request format for api authentication requests
-   *
    * @param email the user email
    * @param info the OAuth2Info as returned by some Oauth2 service on the client side (eg: JS app)
    */
@@ -222,76 +224,32 @@ trait OAuth2Provider extends IdentityProvider with ApiSupport {
   }
 }
 
-object OAuth2Provider {
-  /**
-   * Base class for all OAuth2 providers
-   */
-  abstract class Base(
-      val routesService: RoutesService,
-      val client: OAuth2Client,
-      val cacheService: CacheService) extends OAuth2Provider {
-    private implicit val implicitConf = configuration
-    protected implicit val playEnv: Environment
-    protected implicit val executionContext: ExecutionContext = client.executionContext
-    protected implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
-  }
-}
-
 /**
  * The settings for OAuth2 providers.
  */
-case class OAuth2Settings(authorizationUrl: String, accessTokenUrl: String, clientId: String,
-  clientSecret: String, scope: Option[String],
-  authorizationUrlParams: Map[String, String], accessTokenUrlParams: Map[String, String])
+case class OAuth2Settings(
+  authorizationUrl: String,
+  accessTokenUrl: String,
+  clientId: String,
+  clientSecret: String,
+  scope: Option[String],
+  authorizationUrlParams: Map[String, String],
+  accessTokenUrlParams: Map[String, String])
 
 object OAuth2Settings {
-  val AuthorizationUrl = "authorizationUrl"
-  val AccessTokenUrl = "accessTokenUrl"
-  val AuthorizationUrlParams = "authorizationUrlParams"
-  val AccessTokenUrlParams = "accessTokenUrlParams"
-  val ClientId = "clientId"
-  val ClientSecret = "clientSecret"
-  val Scope = "scope"
-}
 
-trait OAuth2SettingsBuilder {
-  def forProvider(id: String): OAuth2Settings
-}
+  implicit val configLoader: ConfigLoader[OAuth2Settings] = AutoConfig.loader
 
-object OAuth2SettingsBuilder {
-  class Default(implicit val configuration: Configuration, implicit val environment: Environment) extends OAuth2SettingsBuilder {
-    implicit val identityProviderConfigurations = new IdentityProviderConfigurations.Default
-    /**
-     * Helper method to create an OAuth2Settings instance from the properties file.
-     *
-     * @param id the provider id
-     * @return an OAuth2Settings instance
-     */
-    def forProvider(id: String): OAuth2Settings = {
-      val propertyKey = s"securesocial.$id."
-
-      val result = for {
-        authorizationUrl <- identityProviderConfigurations.loadProperty(id, OAuth2Settings.AuthorizationUrl)
-        accessToken <- identityProviderConfigurations.loadProperty(id, OAuth2Settings.AccessTokenUrl)
-        clientId <- identityProviderConfigurations.loadProperty(id, OAuth2Settings.ClientId)
-        clientSecret <- identityProviderConfigurations.loadProperty(id, OAuth2Settings.ClientSecret)
-      } yield {
-        val scope = identityProviderConfigurations.loadProperty(id, OAuth2Settings.Scope, optional = true)
-        val authorizationUrlParams: Map[String, String] =
-          configuration.getObject(propertyKey + OAuth2Settings.AuthorizationUrlParams).map { o =>
-            o.unwrapped.toMap.mapValues(_.toString)
-          }.getOrElse(Map())
-
-        val accessTokenUrlParams: Map[String, String] = configuration.getObject(propertyKey + OAuth2Settings.AccessTokenUrlParams).map { o =>
-          o.unwrapped.toMap.mapValues(_.toString)
-        }.getOrElse(Map())
-        OAuth2Settings(authorizationUrl, accessToken, clientId, clientSecret, scope, authorizationUrlParams, accessTokenUrlParams)
-      }
-      if (!result.isDefined) {
-        identityProviderConfigurations.throwMissingPropertiesException(id)
-      }
-      result.get
-    }
+  /**
+   * Helper method to create an OAuth2Settings instance from the properties file.
+   *
+   * @param id the provider id
+   * @return an OAuth2Settings instance
+   */
+  def forProvider(configuration: Configuration, id: String): OAuth2Settings = {
+    val path = s"securesocial.$id"
+    val defaultPath = "securesocial.oauth2Settings"
+    (Configuration(path -> configuration.get[ConfigObject](defaultPath)) ++ configuration).get[OAuth2Settings](path)
   }
 }
 
