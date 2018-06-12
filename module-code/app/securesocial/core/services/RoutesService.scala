@@ -88,7 +88,7 @@ trait RoutesService {
   /**
    * The url to start an authentication flow with the given provider
    */
-  def authenticationUrl(provider: String, redirectTo: Option[String] = None, scope: Option[String] = None)(implicit req: RequestHeader): String
+  def authenticationUrl(provider: String, redirectTo: Option[String] = None, scope: Option[String] = None, authorizationUrlParams: Map[String, String] = Map(), saveMode: Option[String] = None, miscParam: Option[String] = None)(implicit req: RequestHeader): String
 
   def faviconPath: Call
   def jqueryPath: Call
@@ -172,8 +172,8 @@ object RoutesService {
       absoluteUrl(securesocial.controllers.routes.PasswordChange.handlePasswordChange)
     }
 
-    override def authenticationUrl(provider: String, redirectTo: Option[String] = None, scope: Option[String] = None)(implicit req: RequestHeader): String = {
-      absoluteUrl(securesocial.controllers.routes.ProviderController.authenticate(provider, redirectTo, scope))
+    override def authenticationUrl(provider: String, redirectTo: Option[String] = None, scope: Option[String] = None, authorizationUrlParams: Map[String, String], saveMode: Option[String], miscParam: Option[String])(implicit req: RequestHeader): String = {
+      absoluteUrl(securesocial.controllers.routes.ProviderController.authenticate(provider, redirectTo, scope, authorizationUrlParams, saveMode, miscParam))
     }
 
     protected def valueFor(key: String) = {
