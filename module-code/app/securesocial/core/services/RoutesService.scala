@@ -16,8 +16,9 @@
  */
 package securesocial.core.services
 
+import com.typesafe.config.ConfigException.WrongType
 import play.api.mvc.{ Call, RequestHeader }
-import play.api.{ Configuration, Environment }
+import play.api.{ Configuration, Environment, PlayException }
 import securesocial.core.SslEnabled
 
 /**
@@ -116,8 +117,18 @@ object RoutesService {
     private lazy val applicationHost = configuration.get[Option[String]](ApplicationHostKey).getOrElse {
       throw new RuntimeException(s"Missing property: $ApplicationHostKey")
     }
-    private lazy val applicationPort =
-      configuration.get[Option[Int]](ApplicationPortKey).map(port => s":$port").getOrElse("")
+    private lazy val applicationPort = {
+      val defaultPort = if (sslEnabled.value) 443 else 80
+      try {
+        configuration.getOptional[Int](ApplicationPortKey)
+          .filterNot(_ == defaultPort).map(port => s":$port").getOrElse("")
+      } catch {
+        // This exception is thrown when the value of "securesocial.applicationPort" is empty.
+        case e: PlayException if (e.cause.isInstanceOf[WrongType]) =>
+          logger.warn(e.getMessage)
+          ""
+      }
+    }
     private lazy val hostAndPort = s"$applicationHost$applicationPort"
 
     protected def absoluteUrl(call: Call)(implicit req: RequestHeader): String = {
