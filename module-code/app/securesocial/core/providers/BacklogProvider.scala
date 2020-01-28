@@ -18,7 +18,6 @@
  */
 package securesocial.core.providers
 
-import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
 
 import play.api.libs.ws.{ WSRequest, WSResponse }
@@ -38,7 +37,7 @@ class BacklogOAuth2Client(
 
   def retrieveProfile(profileUrl: String, accessToken: String): Future[JsValue] = {
     httpService.url(profileUrl)
-      .withHeaders("Authorization" -> s"Bearer $accessToken")
+      .withHttpHeaders("Authorization" -> s"Bearer $accessToken")
       .get().map(_.json)
   }
 
