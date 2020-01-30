@@ -7,10 +7,11 @@ Below is the original README as of Mar 12, 2015:
 
 # Installation
 
-## Play! 2.4, 2.5 and 2.6
+## Play! 2.4 and newer
 
 |SecureSocial Release|Target Play Framework version|
 |-------|---------------------|
+|3.4.0-SNAPSHOT|2.7.X|
 |3.3.0-SNAPSHOT|2.6.X|
 |3.2.5|2.5.X|
 |3.1.0-SNAPSHOT|2.4.X|
@@ -18,10 +19,10 @@ Below is the original README as of Mar 12, 2015:
 ```
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-libraryDependencies += "tv.kazu" %% "securesocial" % "3.3.0-SNAPSHOT"
+libraryDependencies += "tv.kazu" %% "securesocial" % "3.4.0-SNAPSHOT"
 ```
 
-Support for Play 2.5 is used for some sites in production. Support for Play 2.4 is not tested nor maintained. Bug reports would be welcome.
+Support for Play 2.5 to 2.7 is used for some sites in production. Support for Play 2.4 is not tested nor maintained. Bug reports would be welcome.
 
 ## Play! 2.3
 

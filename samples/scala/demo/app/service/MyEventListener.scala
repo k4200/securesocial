@@ -17,13 +17,13 @@
 package service
 
 import securesocial.core._
-import play.api.mvc.{ Session, RequestHeader }
-import play.api.Logger
+import play.api.mvc.{ RequestHeader, Session }
+import play.api.Logging
 
 /**
  * A sample event listener
  */
-class MyEventListener extends EventListener {
+class MyEventListener extends EventListener with Logging {
 
   def onEvent[U](event: Event[U], request: RequestHeader, session: Session): Option[Session] = {
     val eventName = event match {
@@ -36,11 +36,11 @@ class MyEventListener extends EventListener {
     }
 
     event match {
-      case Event(u: DemoUser) => Logger.info("traced %s event for user %s".format(eventName, u.main.userId))
+      case Event(u: DemoUser) => logger.info("traced %s event for user %s".format(eventName, u.main.userId))
     }
 
     // retrieving the current language
-    Logger.info("current language is %s".format(request2lang(request)))
+    logger.info("current language is %s".format(request))
 
     // Not changing the session so just return None
     // if you wanted to change the session then you'd do something like
