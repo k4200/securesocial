@@ -5,7 +5,7 @@ logLevel := Level.Warn
 resolvers += Resolver.typesafeRepo("releases")
 
 // Use the Play sbt plugin for Play projects
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % System.getProperty("play.version", "2.6.13"))
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % System.getProperty("play.version", "2.7.3"))
 
 // Add Scalariform
 addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")

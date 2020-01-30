@@ -49,7 +49,7 @@ class ChatWorkProvider(
 
   override def fillProfile(info: OAuth2Info): Future[BasicProfile] = {
     val accessToken = info.accessToken
-    client.httpService.url(ChatWorkProvider.Api).withHeaders("Authorization" -> s"Bearer $accessToken").get().map { response =>
+    client.httpService.url(ChatWorkProvider.Api).withHttpHeaders("Authorization" -> s"Bearer $accessToken").get().map { response =>
       response.status match {
         case 200 =>
           val data = response.json
