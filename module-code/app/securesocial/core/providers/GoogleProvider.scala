@@ -30,21 +30,17 @@ class GoogleProvider(
   cacheService: CacheService,
   client: OAuth2Client)
   extends OAuth2Provider(routesService, client, cacheService) {
-  val UserInfoApi = "https://www.googleapis.com/plus/v1/people/me?fields=id,name,displayName,image,emails&access_token="
+  val UserInfoApi = "https://www.googleapis.com/oauth2/v3/userinfo?access_token="
   val Error = "error"
   val Message = "message"
   val Code = "code"
-  val Id = "id"
+  val Id = "sub"
   val Name = "name"
-  val GivenName = "givenName"
-  val FamilyName = "familyName"
-  val DisplayName = "displayName"
-  val Image = "image"
-  val Url = "url"
-  val Emails = "emails"
-  val Email = "value"
-  val EmailType = "type"
-  val Account = "account"
+  val GivenName = "given_name"
+  val FamilyName = "family_name"
+  val DisplayName = "name"
+  val Image = "picture"
+  val Email = "email"
 
   override val id = GoogleProvider.Google
 
@@ -62,9 +58,8 @@ class GoogleProvider(
           val firstName = (me \ Name \ GivenName).asOpt[String]
           val lastName = (me \ Name \ FamilyName).asOpt[String]
           val fullName = (me \ DisplayName).asOpt[String]
-          val avatarUrl = (me \ Image \ Url).asOpt[String]
-          val emails = (me \ Emails).get.asInstanceOf[JsArray]
-          val email = emails.value.find(v => (v \ EmailType).as[String] == Account).map(e => (e \ Email).as[String])
+          val avatarUrl = (me \ Image).asOpt[String]
+          val email = (me \ DisplayName).asOpt[String]
           BasicProfile(id, userId, firstName, lastName, fullName, email, avatarUrl, authMethod, oAuth2Info = Some(info))
       }
     } recover {
